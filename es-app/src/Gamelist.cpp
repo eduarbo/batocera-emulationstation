@@ -10,6 +10,7 @@
 #include <pugixml/src/pugixml.hpp>
 #include "Genres.h"
 #include "Paths.h"
+#include <sstream>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -230,6 +231,15 @@ void parseGamelist(SystemData* system, std::unordered_map<std::string, FileData*
 		system->setGamelistHash(size);	
 }
 
+// Gamelists are replaced, never truncated in place: a power cut while saving
+// leaves the previous file instead of an empty or partial one
+static bool saveGamelistFile(pugi::xml_document& doc, const std::string& path)
+{
+	std::ostringstream xml;
+	doc.save(xml);
+	return Utils::FileSystem::writeFileAtomic(path, xml.str());
+}
+
 bool addFileDataNode(pugi::xml_node& parent, FileData* file, const char* tag, SystemData* system, bool fullPaths = false)
 {
 	//create game and add to parent node
@@ -282,8 +292,7 @@ bool saveToXml(FileData* file, const std::string& fileName, bool fullPaths)
 		if (!Utils::FileSystem::exists(folder))
 			Utils::FileSystem::createDirectory(folder);
 
-		Utils::FileSystem::removeFile(fileName);
-		if (!doc.save_file(WINSTRINGW(fileName).c_str()))
+		if (!saveGamelistFile(doc, fileName))
 		{
 			LOG(LogError) << "Error saving metadata to \"" << fileName << "\" (for system " << system->getName() << ")!";
 			return false;
@@ -449,7 +458,7 @@ void updateGamelist(SystemData* system)
 
 		LOG(LogInfo) << "Added/Updated " << numUpdated << " entities in '" << xmlReadPath << "'";
 
-		if (!doc.save_file(WINSTRINGW(xmlWritePath).c_str()))
+		if (!saveGamelistFile(doc, xmlWritePath))
 			LOG(LogError) << "Error saving gamelist.xml to \"" << xmlWritePath << "\" (for system " << system->getName() << ")!";
 		else
 			clearTemporaryGamelistRecovery(system);
@@ -703,7 +712,7 @@ void cleanupGamelist(SystemData* system)
 		Utils::FileSystem::removeFile(oldXml);
 		Utils::FileSystem::copyFile(xmlWritePath, oldXml);
 
-		if (!doc.save_file(WINSTRINGW(xmlWritePath).c_str()))
+		if (!saveGamelistFile(doc, xmlWritePath))
 			LOG(LogError) << "Error saving gamelist.xml to \"" << xmlWritePath << "\" (for system " << system->getName() << ")!";
 		else
 			clearTemporaryGamelistRecovery(system);

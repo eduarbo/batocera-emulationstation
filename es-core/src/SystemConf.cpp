@@ -14,6 +14,41 @@
 #include <iostream>
 #include <SDL_timer.h>
 
+#if defined(KNULLI) && !defined(WIN32)
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+
+// knulli-settings-set rewrites knulli.conf while holding this lock. Holding it from
+// reading the file to replacing it keeps either writer from dropping the other's change.
+class ConfLock
+{
+public:
+	ConfLock() : mFd(open("/var/run/knulli-settings-set.lock", O_RDWR | O_CREAT | O_CLOEXEC, 0644))
+	{
+		// Wait up to 2 s, then save anyway rather than lose the change
+		for (int i = 0; mFd >= 0 && i < 200; i++)
+		{
+			if (flock(mFd, LOCK_EX | LOCK_NB) == 0)
+				return;
+
+			usleep(10000);
+		}
+
+		LOG(LogWarning) << "saveSystemConf : knulli.conf lock not available, saving without it";
+	}
+
+	~ConfLock()
+	{
+		if (mFd >= 0)
+			close(mFd); // releases the lock
+	}
+
+private:
+	int mFd;
+};
+#endif
+
 static std::string mapSettingsName(const std::string& name)
 {
 	if (name == "system.language")
@@ -108,6 +143,10 @@ bool SystemConf::saveSystemConf()
 	if (changedConf.empty())
 		return false;
 
+#if defined(KNULLI) && !defined(WIN32)
+	ConfLock lock;
+#endif
+
 	std::ifstream filein(mSystemConfFile); //File to read from
 
 #ifndef WIN32
@@ -185,25 +224,20 @@ bool SystemConf::saveSystemConf()
 
 	LOG(LogDebug) << "saveSystemConf :  " << lastTime;
 
-	std::ofstream fileout(mSystemConfFileTmp); //Temporary file
-	if (!fileout)
-	{
-		LOG(LogError) << "Unable to open for saving :  " << mSystemConfFileTmp << "\n";
-		return false;
-	}
+	std::string content;
 	for (int i = 0; i < fileLines.size(); i++) 
 	{
 		if (fileLines[i] != removeID)
-			fileout << fileLines[i] << "\n";
+			content += fileLines[i] + "\n";
 	}
 
-	fileout.close();
-	
-	std::ifstream  src(mSystemConfFileTmp, std::ios::binary);
-	std::ofstream  dst(mSystemConfFile, std::ios::binary);
-	dst << src.rdbuf();
+	// Never truncate knulli.conf in place: a power cut would leave it empty or partial
+	if (!Utils::FileSystem::writeFileAtomic(mSystemConfFile, content))
+	{
+		LOG(LogError) << "Unable to save :  " << mSystemConfFile << "\n";
+		return false;
+	}
 
-	remove(mSystemConfFileTmp.c_str());
 	changedConf.clear();
 
 	Scripting::fireEvent("config-changed");

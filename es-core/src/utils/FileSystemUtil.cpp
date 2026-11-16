@@ -28,6 +28,10 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <mutex>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdlib.h>
 #endif // _WIN32
 
 #include <fstream>
@@ -1276,6 +1280,93 @@ namespace Utils
 
 			fwrite(buffer, 1, size, file);
 			fclose(file);
+		}
+
+		bool writeFileAtomic(const std::string& fileName, const std::string& text)
+		{
+#if defined(_WIN32)
+			std::string tmp = fileName + ".tmp";
+			FILE* file = _wfopen(Utils::String::convertToWideString(tmp).c_str(), L"wb");
+			if (file == nullptr)
+				return false;
+
+			bool written = fwrite(text.data(), 1, text.size(), file) == text.size();
+			written = (fflush(file) == 0) && written;
+			fclose(file);
+
+			if (!written || !MoveFileExW(Utils::String::convertToWideString(tmp).c_str(), Utils::String::convertToWideString(fileName).c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+			{
+				_wremove(Utils::String::convertToWideString(tmp).c_str());
+				return false;
+			}
+
+			return true;
+#else
+			// Replace the file a symlink points to, not the symlink
+			std::string target = fileName;
+			char resolved[PATH_MAX];
+			if (realpath(fileName.c_str(), resolved) != nullptr)
+				target = resolved;
+
+			std::vector<char> tmp(target.begin(), target.end());
+			for (char c : std::string(".tmp.XXXXXX"))
+				tmp.push_back(c);
+			tmp.push_back(0);
+
+			int fd = mkstemp(tmp.data());
+			if (fd < 0)
+				return false;
+
+			// mkstemp creates 0600: keep the mode and owner of the file being replaced
+			struct stat info;
+			if (stat(target.c_str(), &info) == 0)
+			{
+				fchmod(fd, info.st_mode & 07777);
+
+				// Best effort: only root can give the file another owner
+				int owned = fchown(fd, info.st_uid, info.st_gid);
+				(void)owned;
+			}
+			else
+				fchmod(fd, 0644);
+
+			bool written = true;
+			const char* data = text.data();
+			size_t left = text.size();
+			while (left > 0)
+			{
+				ssize_t count = write(fd, data, left);
+				if (count < 0 && errno == EINTR)
+					continue;
+
+				if (count <= 0)
+				{
+					written = false;
+					break;
+				}
+
+				data += count;
+				left -= count;
+			}
+
+			written = (fsync(fd) == 0) && written;
+			written = (close(fd) == 0) && written;
+
+			if (!written || rename(tmp.data(), target.c_str()) != 0)
+			{
+				unlink(tmp.data());
+				return false;
+			}
+
+			int dir = open(getParent(target).c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+			if (dir >= 0)
+			{
+				fsync(dir);
+				close(dir);
+			}
+
+			return true;
+#endif
 		}
 
 		bool renameFile(const std::string src, const std::string dst, bool overWrite)

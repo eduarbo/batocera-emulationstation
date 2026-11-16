@@ -6,6 +6,7 @@
 #include "utils/Platform.h"
 #include <pugixml/src/pugixml.hpp>
 #include <algorithm>
+#include <sstream>
 #include <vector>
 #include "utils/StringUtil.h"
 #include "Paths.h"
@@ -451,7 +452,10 @@ bool Settings::saveFile()
 		node.append_attribute("value").set_value(iter->second.c_str());
 	}
 
-	doc.save_file(WINSTRINGW(path).c_str());
+	std::ostringstream xml;
+	doc.save(xml);
+	if (!Utils::FileSystem::writeFileAtomic(path, xml.str()))
+		LOG(LogError) << "Settings::saveFile() : unable to save " << path;
 
 	Scripting::fireEvent("config-changed");
 	Scripting::fireEvent("settings-changed");

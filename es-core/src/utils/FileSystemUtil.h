@@ -67,6 +67,9 @@ namespace Utils
 		std::string	readAllText(const std::string& fileName);
 		stringList	readAllLines(const std::string& fileName);
 		void		writeAllText(const std::string& fileName, const std::string& text);
+		// Replaces fileName so that a crash or power cut leaves the old or the new content,
+		// never a partial file (temporary file in the same folder, fsync, rename, folder fsync)
+		bool		writeFileAtomic(const std::string& fileName, const std::string& text);
 		bool		copyFile(const std::string src, const std::string dst);
 		void		deleteDirectoryFiles(const std::string path, bool deleteDirectory = false);
 		bool		renameFile(const std::string src, const std::string dst, bool overWrite = true);
