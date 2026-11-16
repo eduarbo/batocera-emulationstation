@@ -210,7 +210,9 @@ void MetaDataList::loadFromXML(MetaDataListType type, pugi::xml_node& node, Syst
 		if (mdd.id == MetaDataId::GenreIds)
 			continue;
 
-		if (value == mdd.defaultValue)
+		// Skip default values, unless they replace a value that is already set
+		// (e.g. favorite=false or lastplayed=0 sent to /addgames for an existing game)
+		if (value == mdd.defaultValue && (value.empty() || mMap.find(mdd.id) == mMap.cend()))
 			continue;
 
 		if (mdd.type == MD_BOOL)
