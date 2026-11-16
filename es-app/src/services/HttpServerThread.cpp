@@ -30,8 +30,8 @@
 Misc APIS
 -----------------
 GET  /caps                                                      -> capability info
-GET  /restart
-GET  /quit
+GET  /restart													-> reboots the system, like RESTART SYSTEM in the quit menu (not only EmulationStation)
+GET  /quit														-> exits EmulationStation; on Knulli, emulationstation-standalone starts it again
 GET  /emukill
 GET  /reloadgames
 POST /messagebox												-> body must contain the message text as text/plain
@@ -53,7 +53,7 @@ POST /systems/{systemName}/games/{gameId}/media/{mediaType}		-> body must contai
 Store APIs
 ----------
 POST /addgames/{systemName}										-> body must contain partial gamelist.xml file as application/xml
-POST /removegames/{systemName}									-> body must contains partial gamelist.xml file as application/xml
+POST /removegames/{systemName}									-> body must contains partial gamelist.xml file as application/xml. Deletes the listed game files from disk
 
 File APIs
 ---------
