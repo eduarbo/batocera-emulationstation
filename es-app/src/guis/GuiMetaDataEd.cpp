@@ -26,6 +26,7 @@
 #include "ApiSystem.h"
 #include "scrapers/Scraper.h"
 #include "Genres.h"
+#include "Scripting.h"
 #include <algorithm>
 #include <set>
 
@@ -411,6 +412,8 @@ bool GuiMetaDataEd::save()
 
 	auto performSave = [this](std::set<std::string> filesToCopy)
 	{
+		bool wasFavorite = mMetaData->get(MetaDataId::Favorite) == "true";
+
 		// remove game from index
 		mScraperParams.system->removeFromIndex(mScraperParams.game);
 
@@ -467,6 +470,13 @@ bool GuiMetaDataEd::save()
 
 		// update respective Collection Entries
 		CollectionSystemManager::get()->refreshCollectionSystems(mScraperParams.game);
+
+		bool isFavorite = mMetaData->get(MetaDataId::Favorite) == "true";
+		if (isFavorite != wasFavorite)
+		{
+			auto sourceFile = mScraperParams.game->getSourceFileData();
+			Scripting::fireEvent("game-favorite-changed", sourceFile->getSystem()->getName(), sourceFile->getPath(), isFavorite ? "true" : "false");
+		}
 	};
 
 	for (unsigned int i = 0; i < mEditors.size(); i++)

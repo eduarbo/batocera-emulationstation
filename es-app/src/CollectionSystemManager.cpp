@@ -22,6 +22,7 @@
 #include "utils/ThreadPool.h"
 #include "Genres.h"
 #include "Paths.h"
+#include "Scripting.h"
 
 std::string myCollectionsName = "collections";
 
@@ -675,6 +676,8 @@ bool CollectionSystemManager::toggleGameInCollection(FileData* file, const std::
 		sourceSystem->addToIndex(sourceFile);
 		saveToGamelistRecovery(sourceFile);
 		refreshCollectionSystems(sourceFile);
+
+		Scripting::fireEvent("game-favorite-changed", sourceSystem->getName(), sourceFile->getPath(), adding ? "true" : "false");
 
 		auto view = ViewController::get()->getGameListView(sourceSystem, false);
 		if (view != nullptr && view->hasFileDataEntry(sourceFile))
