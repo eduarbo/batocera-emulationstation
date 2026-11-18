@@ -24,6 +24,7 @@ namespace Utils
 		bool         startsWith         (const std::string& _string, const std::string& _start);
 		bool         endsWith           (const std::string& _string, const std::string& _end);
 		std::string  removeParenthesis  (const std::string& _string);		
+		std::string  cleanTitle         (const std::string& _string);
 		std::string  vectorToCommaString(stringVector _vector);
 		stringVector commaStringToVector(const std::string& _string);
 		std::string  format             (const char* _string, ...);

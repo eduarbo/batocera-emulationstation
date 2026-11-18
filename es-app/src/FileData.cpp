@@ -1822,6 +1822,9 @@ BindableProperty FileData::getProperty(const std::string& name)
 		return name;
 	}
 
+	if (name == "cleanName")
+		return Utils::String::cleanTitle(getName());
+
 	if (name == "nameExtra")
 	{
 		auto name = getName();

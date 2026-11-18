@@ -130,6 +130,7 @@ type                        string
 stars                       string                returns a string composed of rating stars
 nameShort                   string                name, before any parenthesis
 nameExtra                   string                name, after any parenthesis
+cleanName                   string                name without the trailing tags of dump sets: (USA), (En,Fr), (Rev 1), (v1.1), (Beta), [!]...; " : " as ": "
 ```
 
 **global:**

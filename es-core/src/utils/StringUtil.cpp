@@ -418,6 +418,100 @@ namespace Utils
 
 		} // trim
 
+		// A word of a dump set's tag: a region, a language (name or No-Intro code) or a date code
+		static bool isTitleTagWord(const std::string& word)
+		{
+			static const std::vector<std::string> words = {
+				"usa", "us", "u", "europe", "eu", "e", "japan", "jp", "j", "world", "w", "asia", "australia", "brazil",
+				"canada", "china", "france", "germany", "hong", "kong", "italy", "korea", "netherlands", "spain", "sweden",
+				"taiwan", "uk", "scandinavia", "russia", "mexico", "latin", "america", "pal", "ntsc", "unknown",
+				"english", "japanese", "french", "german", "spanish", "italian", "portuguese", "dutch", "swedish",
+				"en", "ja", "fr", "de", "es", "it", "nl", "pt", "sv", "no", "da", "fi", "zh", "ko", "ru", "pl" };
+
+			if (std::find(words.cbegin(), words.cend(), word) != words.cend())
+				return true;
+
+			// languages joined with "+" (En+Fr), version numbers (v1.1, v1.01b), arcade date codes (910522)
+			if (word.find('+') != std::string::npos)
+			{
+				for (auto part : split(word, '+', true))
+					if (!isTitleTagWord(part))
+						return false;
+
+				return true;
+			}
+
+			auto digits = [](const std::string& s, size_t from) { return from < s.size() && s.find_first_not_of("0123456789.", from) >= s.size() - 1 && isdigit(s[from]); };
+			if (word.size() > 1 && word[0] == 'v' && digits(word, 1))
+				return true;
+
+			return word.size() == 6 && word.find_first_not_of("0123456789") == std::string::npos;
+		}
+
+		// The text of one (...) or [...] tag of a dump set: region, languages, revision, version, status
+		static bool isTitleTag(const std::string& tag)
+		{
+			static const std::vector<std::string> status = {
+				"beta", "proto", "prototype", "demo", "sample", "unl", "alt", "kiosk", "debug", "sgb enhanced",
+				"gb compatible", "rumble version", "virtual console", "!" };
+
+			auto items = split(toLower(tag), ',', true);
+			if (items.empty())
+				return false;
+
+			for (auto item : items)
+			{
+				item = trim(item);
+				if (item.empty())
+					return false;
+
+				// "Rev 1", "Rev A", "Revision 2", "Version 1.1", "Beta 2", "Alt 1"
+				auto words = split(item, ' ', true);
+				if (words.size() == 2 && (words[0] == "rev" || words[0] == "revision" || words[0] == "version" || words[0] == "ver" ||
+					((words[0] == "beta" || words[0] == "proto" || words[0] == "alt" || words[0] == "demo") && isdigit(words[1][0]))))
+					continue;
+
+				if (std::find(status.cbegin(), status.cend(), item) != status.cend())
+					continue;
+
+				// GoodTools codes: [a1], [b2], [h1], [o1], [f1], [p1], [t1], [T+Eng]
+				if (item.size() <= 3 && strchr("abfhopt", item[0]) && item.find_first_not_of("0123456789", 1) == std::string::npos)
+					continue;
+
+				if (item.size() > 2 && item[0] == 't' && (item[1] == '+' || item[1] == '-'))
+					continue;
+
+				bool all = true;
+				for (auto word : words)
+					all = all && isTitleTagWord(word);
+
+				if (!all)
+					return false;
+			}
+
+			return true;
+		}
+
+		// A game's name for display: the trailing tags of dump sets dropped, (USA), (En,Fr), (Rev 1), (v1.1),
+		// (Beta), [!]..., and " : " written ": ". Other parentheses stay ("Game (Special Edition)").
+		std::string cleanTitle(const std::string& _string)
+		{
+			std::string name = trim(_string);
+
+			while (name.size() > 2 && (name.back() == ')' || name.back() == ']'))
+			{
+				char open = name.back() == ')' ? '(' : '[';
+				size_t start = name.rfind(open);
+				if (start == std::string::npos || start == 0 || !isTitleTag(name.substr(start + 1, name.size() - start - 2)))
+					break;
+
+				name = trim(name.substr(0, start));
+			}
+
+			name = replace(name, " : ", ": ");
+			return name.empty() ? trim(_string) : name;
+		}
+
 		std::string replace(const std::string& _string, const std::string& _replace, const std::string& _with)
 		{
 			if (_replace.empty())
