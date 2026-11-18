@@ -1175,10 +1175,10 @@ Can be created as an extra, or in an `itemTemplate`.
 Captures shown one at a time at whole-pixel scales: the smallest of 1/4, 1/2, 1, 2, 3 and 4 at which the
 capture's region of interest covers the element, centred (on the capture's pixel grid at 2x and up), so pixel
 art stays sharp. In a grid's item template it moves only on the selected item: every `interval` seconds the
-next capture slides in from the right in `duration` seconds, and the other items show the first capture. It
-stops under the screen saver, while the view is hidden and with the idle pause (Idle pause, below); a capture
-that does not load (gone, not an image) is asked for once more, then skipped. Child elements (a screen filter, a
-frame) are drawn over the captures, the dots over them.
+next capture slides in from the right (or fades in, `transition`) in `duration` seconds, and the other items
+show the first capture. It stops under the screen saver, while the view is hidden and with the idle pause (Idle
+pause, below); a capture that does not load (gone, not an image) is asked for once more, then skipped. Child
+elements (a screen filter, a frame) are drawn over the captures, the dots over them.
 
 * `pos`, `size`, `x`, `y`, `w`, `h`, `origin`, `opacity`, `visible`, `zIndex` - as for `image`.
 * `path` - type: STRING.
@@ -1186,7 +1186,9 @@ frame) are drawn over the captures, the dots over them.
 * `interval` - type: FLOAT.
     - Seconds on each capture (default 4).
 * `duration` - type: FLOAT.
-    - Seconds of the slide to the next capture (default 0.6).
+    - Seconds of the change to the next capture (default 0.6).
+* `transition` - type: STRING.
+    - `slide` (from the right, the default) or `fade` (the next capture over the current one).
 * `color` - type: COLOR.
     - Multiplied with the captures (a Game Boy's green, say).
 * `saturation` - type: FLOAT.

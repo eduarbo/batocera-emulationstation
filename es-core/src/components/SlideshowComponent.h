@@ -13,9 +13,9 @@ class TextureResource;
 
 // <slideshow>: captures shown one at a time at whole-pixel scales (SlideLayout::fit). In a grid's item
 // template it moves only on the selected item: every <interval> seconds the next capture slides in from
-// the right in <duration> seconds, with dots for the position; the other items show the first capture.
-// <path> lists the captures, one per line ("{system:slides}" on the system grid). It stops with the idle pause
-// (Window::isIdlePaused).
+// the right (<transition> "slide") or fades in over the current one ("fade") in <duration> seconds, with
+// dots for the position; the other items show the first capture. <path> lists the captures, one per line
+// ("{system:slides}" on the system grid). It stops with the idle pause (Window::isIdlePaused).
 class SlideshowComponent : public GuiComponent
 {
 public:
@@ -40,7 +40,7 @@ public:
 private:
 	bool isActive();
 	std::shared_ptr<TextureResource> loadTexture(const std::string& path);
-	void drawSlide(const std::shared_ptr<TextureResource>& texture, float dx, const Transform4x4f& trans);
+	void drawSlide(const std::shared_ptr<TextureResource>& texture, float dx, const Transform4x4f& trans, float alpha = 1.0f);
 	void drawDots(int shown, const Transform4x4f& trans);
 
 	std::string mPathsValue;
@@ -57,6 +57,7 @@ private:
 	float mSaturation;
 	float mRoundCorners;
 	Vector4f mRoi;
+	bool mFade;
 
 	bool mDots;
 	int mMaxDots;

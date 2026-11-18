@@ -10,7 +10,7 @@
 #include "Window.h"
 
 SlideshowComponent::SlideshowComponent(Window* window) : GuiComponent(window),
-	mShown(0), mScreenSaverActive(false), mColor(0xFFFFFFFF), mSaturation(1.0f), mRoundCorners(0.0f), mRoi(0, 0, 1, 1),
+	mShown(0), mScreenSaverActive(false), mColor(0xFFFFFFFF), mSaturation(1.0f), mRoundCorners(0.0f), mRoi(0, 0, 1, 1), mFade(false),
 	mDots(false), mMaxDots(9), mDotSize(4.0f / 480.0f), mDotsOffset(9.0f / 640.0f, 9.0f / 480.0f),
 	mDotColor(0xFFFFFF55), mDotSelectedColor(0xFFFFFFD0)
 {
@@ -100,7 +100,7 @@ void SlideshowComponent::update(int deltaTime)
 		mNextTexture->reload();
 }
 
-void SlideshowComponent::drawSlide(const std::shared_ptr<TextureResource>& texture, float dx, const Transform4x4f& trans)
+void SlideshowComponent::drawSlide(const std::shared_ptr<TextureResource>& texture, float dx, const Transform4x4f& trans, float alpha)
 {
 	if (texture == nullptr)
 		return;
@@ -119,7 +119,7 @@ void SlideshowComponent::drawSlide(const std::shared_ptr<TextureResource>& textu
 	float r = x + fit.w;
 	float b = y + fit.h;
 
-	float opacity = getOpacity() / 255.0f;
+	float opacity = getOpacity() / 255.0f * alpha;
 	const unsigned int color = Renderer::convertColor((mColor & 0xFFFFFF00) | (unsigned char)((mColor & 0xFF) * opacity));
 
 	Renderer::Vertex vertices[4];
@@ -200,9 +200,17 @@ void SlideshowComponent::render(const Transform4x4f& parentTrans)
 	if (mClock.progress() >= 0 && mNextTexture != nullptr)
 	{
 		float t = SlideLayout::ease(mClock.progress());
-		float dx = Math::round(t * mSize.x());
-		drawSlide(mTexture, -dx, trans);
-		drawSlide(mNextTexture, mSize.x() - dx, trans);
+		if (mFade)
+		{
+			drawSlide(mTexture, 0, trans);
+			drawSlide(mNextTexture, 0, trans, t);
+		}
+		else
+		{
+			float dx = Math::round(t * mSize.x());
+			drawSlide(mTexture, -dx, trans);
+			drawSlide(mNextTexture, mSize.x() - dx, trans);
+		}
 
 		if (t > 0.5f)
 			shown = mClock.next();
@@ -262,6 +270,9 @@ void SlideshowComponent::applyTheme(const std::shared_ptr<ThemeData>& theme, con
 		duration = (int)(Math::max(0.0f, elem->get<float>("duration")) * 1000.0f);
 
 	mClock.setTiming(interval, duration);
+
+	if (elem->has("transition"))
+		mFade = elem->get<std::string>("transition") == "fade";
 
 	if (elem->has("color"))
 		mColor = elem->get<unsigned int>("color");

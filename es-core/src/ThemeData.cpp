@@ -112,7 +112,8 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "origin", NORMALIZED_PAIR },
 		{ "path", STRING },					// the captures, one per line ({system:slides})
 		{ "interval", FLOAT },				// seconds on each capture
-		{ "duration", FLOAT },				// seconds of the slide to the next one
+		{ "duration", FLOAT },				// seconds of the change to the next one
+		{ "transition", STRING },			// "slide" (from the right) or "fade"
 		{ "color", COLOR },
 		{ "saturation", FLOAT },
 		{ "roundCorners", FLOAT },
