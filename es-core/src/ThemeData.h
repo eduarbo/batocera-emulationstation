@@ -194,6 +194,16 @@ struct PromptElement
 	unsigned int color;
 };
 
+// Menu sliders' value and track (menuSlider)
+struct SliderElement
+{
+	std::shared_ptr<Font> font;	// the value; nullptr: ES's light font as high as the slider
+	unsigned int trackColor;	// 0: the text's colour
+	unsigned int fillColor;		// the track left of the knob; 0: as the rest
+	float trackSize;			// pixels; 0: 2
+	float knobSize;				// pixels; 0: 0.7 times the slider's height
+};
+
 // The text field of the on-screen keyboard and of other text popups (menuTextEdit)
 struct TextEditElement
 {
@@ -243,6 +253,7 @@ public:
 		IconElement Icons { ":/on.svg", ":/off.svg", ":/auto.svg", ":/option_arrow.svg", ":/arrow.svg", ":/slider_knob.svg", ":/textinput_ninepatch.png", ":/textinput_ninepatch_active.png" };
 		ButtonElement Button { ":/button.png", ":/button_filled.png", Vector2f(16,16), 0, 0, 0.0f };
 		TextEditElement TextEdit { nullptr, 0 };
+		SliderElement Slider { nullptr, 0, 0, 0.0f, 0.0f };
 		MenuRowElement Row { 0.0f, 10.0f, 0.0f, false, 0.0f };
 		PromptElement Prompt { "", nullptr, 0 };
 		bool FooterAtBottom = false;	// menufooter atBottom

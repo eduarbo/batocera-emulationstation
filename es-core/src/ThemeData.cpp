@@ -714,7 +714,13 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "wordKeys", BOOLEAN },
 		{ "focusKeys", BOOLEAN } } },
 	{ "menuSlider",{
-		{ "path", PATH } } },
+		{ "path", PATH },
+		{ "fontPath", PATH },
+		{ "fontSize", FLOAT },
+		{ "trackColor", COLOR },
+		{ "fillColor", COLOR },
+		{ "trackSize", FLOAT },
+		{ "knobSize", FLOAT } } },
 	{ "menuButton",{
 		{ "cornerSize", NORMALIZED_PAIR },
 		{ "path", PATH },
@@ -2605,6 +2611,20 @@ ThemeData::ThemeMenu::ThemeMenu(ThemeData* theme)
 	elem = theme->getElement("menu", "menuslider", "menuSlider");
 	if (elem && elem->has("path") && ResourceManager::getInstance()->fileExists(elem->get<std::string>("path")))
 		Icons.knob = elem->get<std::string>("path");
+
+	if (elem)
+	{
+		if (elem->has("fontPath") || elem->has("fontSize"))
+			Slider.font = Font::getFromTheme(elem, ThemeFlags::ALL, Font::get(FONT_SIZE_SMALL), true);
+		if (elem->has("trackColor"))
+			Slider.trackColor = elem->get<unsigned int>("trackColor");
+		if (elem->has("fillColor"))
+			Slider.fillColor = elem->get<unsigned int>("fillColor");
+		if (elem->has("trackSize"))
+			Slider.trackSize = elem->get<float>("trackSize") * Renderer::getScreenHeight();
+		if (elem->has("knobSize"))
+			Slider.knobSize = elem->get<float>("knobSize") * Renderer::getScreenHeight();
+	}
 
 	
 	elem = theme->getElement("menu", "menuicons", "menuIcons");

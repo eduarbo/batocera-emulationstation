@@ -221,9 +221,19 @@ void SliderComponent::render(const Transform4x4f& parentTrans)
 
 	float width = mSize.x() - mKnob.getSize().x() - (mValueCache ? mValueCache->metrics.size.x() + 4 : 0);
 
-	//render line
-	const float lineWidth = 2;
-	Renderer::drawRect(mKnob.getSize().x() / 2, mSize.y() / 2 - lineWidth / 2, width, lineWidth, getCurColor());
+	//render line (the theme's track and fill: menuSlider)
+	auto& slider = ThemeData::getMenuTheme()->Slider;
+	const float lineWidth = slider.trackSize > 0 ? Math::round(slider.trackSize) : 2;
+	const float lineY = Math::round(mSize.y() / 2 - lineWidth / 2);
+	unsigned int trackColor = slider.trackColor ? Utils::HtmlColor::applyColorOpacity(slider.trackColor, getOpacity()) : getCurColor();
+	Renderer::drawRect(mKnob.getSize().x() / 2, lineY, width, lineWidth, trackColor);
+
+	if (slider.fillColor && !(mIsAutoMode && getAuto()))
+	{
+		float fill = mKnob.getPosition().x() - mKnob.getSize().x() / 2;
+		if (fill > 0)
+			Renderer::drawRect(mKnob.getSize().x() / 2, lineY, fill, lineWidth, Utils::HtmlColor::applyColorOpacity(slider.fillColor, getOpacity()));
+	}
 
 	//render knob
 	mKnob.render(trans);
@@ -264,7 +274,8 @@ float SliderComponent::getValue()
 void SliderComponent::onSizeChanged()
 {
 	GuiComponent::onSizeChanged();
-	mFont = Font::get((int)(mSize.y()), FONT_PATH_LIGHT);
+	auto font = ThemeData::getMenuTheme()->Slider.font;
+	mFont = font ? font : Font::get((int)(mSize.y()), FONT_PATH_LIGHT);
 	onValueChanged();
 }
 
@@ -318,7 +329,8 @@ void SliderComponent::onValueChanged()
 		mValueCache->metrics.size[0] = textSize.x(); // fudge the width
 	}
 
-	mKnob.setResize(0, mSize.y() * 0.7f);
+	float knobSize = ThemeData::getMenuTheme()->Slider.knobSize;
+	mKnob.setResize(0, knobSize > 0 ? knobSize : mSize.y() * 0.7f);
 	float lineLength = mSize.x() - mKnob.getSize().x() - (mValueCache ? mValueCache->metrics.size.x() + 4 : 0);
 
 	if (mIsAutoMode && getAuto())

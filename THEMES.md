@@ -830,7 +830,7 @@ ES versions with slides support the feature `slideshow`.
 	
 * `menuSwitch name="menuswitch"` - PATHON | PATHOFF
 	- Images for the on/off switch in menus
-* `menuSlider name="menuslider"` - PATH
+* `menuSlider name="menuslider"` - PATH | FONTPATH | FONTSIZE | TRACKCOLOR | FILLCOLOR | TRACKSIZE | KNOBSIZE
 	- Image for the slider knob in menus
 * `menuButton name="menubutton"` - PATH | FILLEDPATH | CORNERSIZE | COLOR | FILLEDCOLOR | HEIGHT
 	- Images for menu buttons
@@ -1505,6 +1505,22 @@ BATOCERA 5.24 - replace the button images in menus
   - The tint of `filledPath`. Default: `menutext`'s `selectorColor`. `FFFFFFFF` draws the image as it is.
 * `height` - type: FLOAT.
   - The buttons' least height, as a fraction of the screen height. Default: the label's height.
+
+#### menuSlider
+
+* `path` - type: PATH.
+  - The knob's image.
+* `fontPath` - type: PATH.
+* `fontSize` - type: FLOAT.
+  - The value's font. Default: ES's light font, as high as the slider.
+* `trackColor` - type: COLOR.
+  - The track's colour. Default: the menu text's colour.
+* `fillColor` - type: COLOR.
+  - The track's colour left of the knob. Default: as the rest of the track.
+* `trackSize` - type: FLOAT.
+  - The track's thickness, as a fraction of the screen height. Default is 2 pixels.
+* `knobSize` - type: FLOAT.
+  - The knob's height, as a fraction of the screen height. Default: 0.7 times the slider's height.
 
 #### menuTextEdit
 
