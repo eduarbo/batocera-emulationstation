@@ -294,6 +294,17 @@ std::vector<std::string> getFallbackFontPaths()
 
 #if defined(WIN32) || defined(X86) || defined(X86_64)
 static std::map<std::string, ResourceData> globalTTFCache;
+#else
+static ResourceData getFallbackFontData(const std::string& path)
+{
+	static std::map<std::string, ResourceData> fallbackData;
+
+	auto it = fallbackData.find(path);
+	if (it == fallbackData.cend())
+		it = fallbackData.insert(std::make_pair(path, ResourceManager::getInstance()->getFileData(path))).first;
+
+	return it->second;
+}
 #endif
 
 FT_Face Font::getFaceForChar(unsigned int id)
@@ -325,7 +336,9 @@ FT_Face Font::getFaceForChar(unsigned int id)
 
 			mFaceCache[i] = std::unique_ptr<FontFace>(new FontFace(std::move(itCache->second), mSize));
 #else
-			ResourceData data = ResourceManager::getInstance()->getFileData(path);
+			// A fallback font's file is read once for all fonts (DroidSansFallbackFull alone is 4 MB, read again for
+			// every font made on a view's load): their faces share its bytes
+			ResourceData data = (i == 0 ? ResourceManager::getInstance()->getFileData(path) : getFallbackFontData(path));
 			mFaceCache[i] = std::unique_ptr<FontFace>(new FontFace(std::move(data), mSize));
 #endif
 			fit = mFaceCache.find(i);
