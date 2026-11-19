@@ -75,6 +75,8 @@ public:
 	// Waits, at most ms, until the players stopped so far released their audio and video outputs (before a
 	// game runs): false when some still stop
 	static bool waitForPlayers(int ms);
+	// The videos showing their frames now (any thread): their paths
+	static std::vector<std::string> shownVideos();
 
 	VideoVlcComponent(Window* window);
 	virtual ~VideoVlcComponent();

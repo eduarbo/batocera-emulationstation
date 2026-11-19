@@ -24,6 +24,7 @@
 #include "scrapers/ThreadedScraper.h"
 #include "guis/GuiUpdate.h"
 #include "ContentInstaller.h"
+#include "components/VideoVlcComponent.h"
 
 /* 
 
@@ -315,6 +316,24 @@ void HttpServerThread::run()
 			res.status = 201;
 		}
 	});	
+
+	// The videos playing now (their frames on the screen): a screen plays one at most
+	mHttpServer->Get("/videos", [](const httplib::Request& req, httplib::Response& res)
+	{
+		if (!isAllowed(req, res))
+			return;
+
+		std::string json = "{ \"playing\": [";
+		bool first = true;
+		for (auto path : VideoVlcComponent::shownVideos())
+		{
+			json += std::string(first ? "" : ", ") + "\"" + Utils::String::replace(Utils::String::replace(path, "\\", "\\\\"), "\"", "\\\"") + "\"";
+			first = false;
+		}
+		json += "] }";
+		res.set_content(json, "application/json");
+		res.status = 200;
+	});
 
 	mHttpServer->Get(R"(/systems/(/?.*)/logo)", [](const httplib::Request& req, httplib::Response& res)
 	{		

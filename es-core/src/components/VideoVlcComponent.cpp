@@ -315,19 +315,41 @@ VideoVlcComponent::VideoVlcComponent(Window* window) : VideoComponent(window),
 	init();
 }
 
-// The videos showing their frames (main thread): a screen shows one at most, so a second one is logged
+// The videos showing their frames: a screen shows one at most, so a second one is logged. Changed on the main
+// thread, read by the web API (GET /videos)
 static std::set<VideoVlcComponent*> sShownVideos;
+static std::vector<std::string> sShownPaths;
+static std::mutex sShownLock;
+
+std::vector<std::string> VideoVlcComponent::shownVideos()
+{
+	std::unique_lock<std::mutex> lock(sShownLock);
+	return sShownPaths;
+}
+
+static void keepShownPaths()
+{
+	std::unique_lock<std::mutex> lock(sShownLock);
+	sShownPaths.clear();
+	for (auto v : sShownVideos)
+		sShownPaths.push_back(v->getVideoPath());
+}
 
 static void videoShown(VideoVlcComponent* video, bool shown)
 {
 	if (!shown)
 	{
 		if (sShownVideos.erase(video) > 0)
+		{
+			keepShownPaths();
 			LOG(LogInfo) << "VideoCheck: " << sShownVideos.size() << (sShownVideos.size() == 1 ? " video plays" : " videos play");
+		}
 		return;
 	}
 
 	bool added = sShownVideos.insert(video).second;
+	if (added)
+		keepShownPaths();
 	if (sShownVideos.size() < 2)
 	{
 		if (added)
