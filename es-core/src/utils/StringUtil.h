@@ -25,6 +25,11 @@ namespace Utils
 		bool         endsWith           (const std::string& _string, const std::string& _end);
 		std::string  removeParenthesis  (const std::string& _string);		
 		std::string  cleanTitle         (const std::string& _string);
+		// Genres as shown: none twice, and none followed by one of its own ("Shooter, Shooter / FPS")
+		std::string  shownGenres        (const std::string& _genres);
+		// A screenshot named as the screenshots tool names them, "game-YYMMDD-HHMMSS": the game (capitalised, its
+		// dashes and underscores as spaces) and when ("22/10/2024 · 00:04")
+		bool         splitShotName      (const std::string& _name, std::string& _game, std::string& _when);
 		std::string  vectorToCommaString(stringVector _vector);
 		stringVector commaStringToVector(const std::string& _string);
 		std::string  format             (const char* _string, ...);

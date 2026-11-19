@@ -1,6 +1,7 @@
 #include "utils/StringUtil.h"
 
 #include <algorithm>
+#include <cctype>
 #include <stdarg.h>
 #include <cstring>
 
@@ -510,6 +511,59 @@ namespace Utils
 
 			name = replace(name, " : ", ": ");
 			return name.empty() ? trim(_string) : name;
+		}
+
+		std::string shownGenres(const std::string& _genres)
+		{
+			std::vector<std::string> genres;
+			for (auto genre : split(_genres, ',', true))
+				genres.push_back(trim(genre));
+
+			std::vector<std::string> shown;
+			for (auto& genre : genres)
+			{
+				if (genre.empty() || std::find(shown.cbegin(), shown.cend(), genre) != shown.cend())
+					continue;
+
+				bool parent = false;
+				for (auto& other : genres)
+					if (other.size() > genre.size() && startsWith(other, genre + " /"))
+						parent = true;
+
+				if (!parent)
+					shown.push_back(genre);
+			}
+
+			return join(shown, ", ");
+		}
+
+		bool splitShotName(const std::string& _name, std::string& _game, std::string& _when)
+		{
+			const std::string name = trim(_name);
+			const size_t n = name.size();
+			if (n < 15 || name[n - 7] != '-' || name[n - 14] != '-')
+				return false;
+
+			for (size_t i = n - 13; i < n; i++)
+				if (i != n - 7 && !std::isdigit((unsigned char)name[i]))
+					return false;
+
+			std::string game = name.substr(0, n - 14);
+			for (auto& c : game)
+				if (c == '-' || c == '_')
+					c = ' ';
+
+			game = trim(game);
+			if (game.empty())
+				return false;
+
+			if (game[0] >= 'a' && game[0] <= 'z')
+				game[0] = game[0] - 'a' + 'A';
+
+			const std::string date = name.substr(n - 13, 6), time = name.substr(n - 6, 6);
+			_game = game;
+			_when = date.substr(4, 2) + "/" + date.substr(2, 2) + "/20" + date.substr(0, 2) + " \xC2\xB7 " + time.substr(0, 2) + ":" + time.substr(2, 2);
+			return true;
 		}
 
 		std::string replace(const std::string& _string, const std::string& _replace, const std::string& _with)

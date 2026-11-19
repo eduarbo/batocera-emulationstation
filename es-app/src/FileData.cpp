@@ -56,7 +56,7 @@ static std::map<std::string, std::function<BindableProperty(FileData*)>> propert
 	{ "trackballGame",			[](FileData* file) { return file->isTrackballGame(); } },
 	{ "spinnerGame",			[](FileData* file) { return file->isSpinnerGame(); } },
 	{ "cheevos",			[](FileData* file) { return file->hasCheevos(); } },
-	{ "genre",			    [](FileData* file) { return file->getGenre(); } },
+	{ "genre",			    [](FileData* file) { return Utils::String::shownGenres(file->getGenre()); } },
 	{ "hasKeyboardMapping", [](FileData* file) { return file->hasKeyboardMapping(); } },	
 	{ "systemName",			[](FileData* file) { return file->getSourceFileData()->getSystem()->getFullName(); } },
 	{ "imageRatio",			[](FileData* file) { return FileData::getImageRatio(file->getImagePath()); } },
@@ -1842,6 +1842,17 @@ BindableProperty FileData::getProperty(const std::string& name)
 
 		return name;
 	}
+
+	// A screenshot's name (game-YYMMDD-HHMMSS): its game, and when it was taken (shotDate)
+	if ((name == "cleanName" || name == "shotDate") && getSystem() != nullptr && getSystem()->getName() == "imageviewer")
+	{
+		std::string game, when;
+		if (Utils::String::splitShotName(getName(), game, when))
+			return name == "cleanName" ? game : when;
+	}
+
+	if (name == "shotDate")
+		return std::string();
 
 	if (name == "cleanName")
 		return Utils::String::cleanTitle(getName());
