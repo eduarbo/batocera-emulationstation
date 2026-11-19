@@ -95,9 +95,6 @@ namespace Utils
 		public:
 			FileSystemCacheActivator();
 			~FileSystemCacheActivator();
-
-		private:
-			static int mReferenceCount;
 		};
 
 	} // FileSystem::
