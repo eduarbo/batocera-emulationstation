@@ -33,6 +33,7 @@
 #include "guis/GuiMsgBox.h"
 #include "Paths.h"
 #include "resources/TextureData.h"
+#include "ImageIO.h"
 #include "QuickResume.h"
 
 using namespace Utils::Platform;
@@ -58,7 +59,27 @@ static std::map<std::string, std::function<BindableProperty(FileData*)>> propert
 	{ "genre",			    [](FileData* file) { return file->getGenre(); } },
 	{ "hasKeyboardMapping", [](FileData* file) { return file->hasKeyboardMapping(); } },	
 	{ "systemName",			[](FileData* file) { return file->getSourceFileData()->getSystem()->getFullName(); } },
+	{ "imageRatio",			[](FileData* file) { return FileData::getImageRatio(file->getImagePath()); } },
 };
+
+// An image's width over its height (0 without one), read from its header once per file and size
+float FileData::getImageRatio(const std::string& path)
+{
+	if (path.empty())
+		return 0.0f;
+
+	static std::map<std::string, std::pair<size_t, float>> ratios;
+
+	size_t size = Utils::FileSystem::getFileSize(path);
+	auto it = ratios.find(path);
+	if (it != ratios.cend() && it->second.first == size)
+		return it->second.second;
+
+	unsigned int w = 0, h = 0;
+	float ratio = ImageIO::loadImageSize(path, &w, &h) && w > 0 && h > 0 ? (float)w / (float)h : 0.0f;
+	ratios[path] = std::make_pair(size, ratio);
+	return ratio;
+}
 
 FileData* FileData::mRunningGame = nullptr;
 

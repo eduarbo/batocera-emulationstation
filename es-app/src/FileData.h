@@ -80,6 +80,9 @@ public:
 
 	static FileData* GetRunningGame() { return mRunningGame; }
 
+	// {game:imageRatio}: the game's image width over its height, 0 without one
+	static float getImageRatio(const std::string& path);
+
 	virtual const std::string& getName();
 
 	inline FileType getType() const { return mType; }

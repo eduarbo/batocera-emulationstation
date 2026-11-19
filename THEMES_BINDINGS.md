@@ -132,6 +132,7 @@ stars                       string                returns a string composed of r
 nameShort                   string                name, before any parenthesis
 nameExtra                   string                name, after any parenthesis
 cleanName                   string                name without the trailing tags of dump sets: (USA), (En,Fr), (Rev 1), (v1.1), (Beta), [!]...; " : " as ": "
+imageRatio                  float                 the image's width over its height (4:3 is 1.33, a DS's two screens 0.67); 0 without an image
 ```
 
 **global:**
