@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <cstring>
+#include <functional>
 #include "math/Vector2f.h"
 #include "math/Vector3f.h"
 
@@ -139,6 +140,7 @@ namespace Renderer
 
 		// What is drawn so far in the frame, as RGBA rows from the bottom; false when the renderer cannot
 		virtual bool		 readPixels(int _x, int _y, int _w, int _h, unsigned char* _rgba) { return false; };
+		virtual void		 clear() { };
 
 		virtual bool		 supportShaders() { return false; }
 		virtual bool		 shaderSupportsCornerSize(const std::string& shader) { return false; };
@@ -205,9 +207,10 @@ namespace Renderer
 
 	// A frame drawn only when it changes: what is drawn between beginFrame and endFrame is kept, and
 	// endFrame draws and shows it only when it differs from the frame on screen (or a texture it uses
-	// changed since); false when the screen keeps the frame it shows
+	// changed since); false when the screen keeps the frame it shows. With Settings "RenderOnChangeVerify"
+	// (tests), drawAgain draws the same frame once more without the cache, and the two must match.
 	void         beginFrame        ();
-	bool         endFrame          ();
+	bool         endFrame          (const std::function<void()>& drawAgain = nullptr);
 	// The next frame is drawn whatever it holds (the screen may have lost the one it showed)
 	void         invalidateFrame   ();
 

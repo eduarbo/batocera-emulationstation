@@ -1123,6 +1123,11 @@ namespace Renderer
 		return true;
 	}
 
+	void GLES20Renderer::clear()
+	{
+		GL_CHECK_ERROR(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+	}
+
 	size_t GLES20Renderer::getTotalMemUsage()
 	{
 		size_t total = 0;

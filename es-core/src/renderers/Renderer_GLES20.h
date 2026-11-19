@@ -54,6 +54,7 @@ namespace Renderer
 
 		size_t		 getTotalMemUsage() override;
 		bool		 readPixels(int _x, int _y, int _w, int _h, unsigned char* _rgba) override;
+		void		 clear() override;
 
 		bool		 supportShaders() { return true; }
 		bool		 shaderSupportsCornerSize(const std::string& shader) override;

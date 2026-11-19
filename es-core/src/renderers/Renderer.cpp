@@ -1043,10 +1043,42 @@ namespace Renderer
 		}
 
 		// The check of the cache (Settings "RenderOnChangeVerify", for tests): every frame is drawn and read
-		// back, and a frame the cache would have left out must have the pixels of the frame before it
+		// back, and a frame the cache would have left out must have the pixels of the frame before it. Each
+		// frame is also drawn a second time without the cache: what the kept commands drew must match it.
 		static bool                       verify = false;
-		static std::vector<unsigned char> lastPixels, pixels;
+		static std::vector<unsigned char> lastPixels, pixels, keptPixels;
 		static int                        judgedSame = 0, differed = 0, drawnSame = 0, checked = 0;
+		static int                        compared = 0, keptDiffered = 0;
+
+		static size_t changedPixels(const std::vector<unsigned char>& a, const std::vector<unsigned char>& b)
+		{
+			size_t changed = 0;
+			for (size_t i = 0; i < a.size() && i < b.size(); i += 4)
+				if (memcmp(&a[i], &b[i], 4) != 0)
+					changed++;
+
+			return changed;
+		}
+
+		static void verifyKept(const std::function<void()>& drawAgain)
+		{
+			int w = getWindowWidth(), h = getWindowHeight();
+			keptPixels.resize((size_t)w * h * 4);
+			if (!Instance()->readPixels(0, 0, w, h, keptPixels.data()))
+				return;
+
+			Instance()->clear();
+			drawAgain();
+
+			pixels.resize(keptPixels.size());
+			if (!Instance()->readPixels(0, 0, w, h, pixels.data()))
+				return;
+
+			compared++;
+			size_t changed = changedPixels(keptPixels, pixels);
+			if (changed > 0 && ++keptDiffered <= 20)
+				LOG(LogError) << "RenderOnChangeVerify: the kept commands drew " << changed << " pixels unlike the frame drawn directly";
+		}
 
 		static void verifyFrame(bool same)
 		{
@@ -1057,10 +1089,7 @@ namespace Renderer
 
 			if (lastPixels.size() == pixels.size())
 			{
-				size_t changed = 0;
-				for (size_t i = 0; i < pixels.size(); i += 4)
-					if (memcmp(&pixels[i], &lastPixels[i], 4) != 0)
-						changed++;
+				size_t changed = changedPixels(pixels, lastPixels);
 
 				if (same)
 					judgedSame++;
@@ -1077,7 +1106,7 @@ namespace Renderer
 			std::swap(pixels, lastPixels);
 
 			if (++checked % 300 == 0)
-				LOG(LogInfo) << "RenderOnChangeVerify: " << checked << " frames, " << judgedSame << " left out, " << differed << " of them changed; " << drawnSame << " drawn the same as the one before";
+				LOG(LogWarning) << "RenderOnChangeVerify: " << checked << " frames, " << judgedSame << " left out, " << differed << " of them changed; " << drawnSame << " drawn the same as the one before; " << compared << " compared with direct drawing, " << keptDiffered << " unlike it";
 		}
 	}
 
@@ -1095,7 +1124,7 @@ namespace Renderer
 		verify = Settings::getInstance()->getBool("RenderOnChangeVerify");
 	}
 
-	bool endFrame()
+	bool endFrame(const std::function<void()>& drawAgain)
 	{
 		using namespace FrameCache;
 
@@ -1109,6 +1138,9 @@ namespace Renderer
 			return false;
 
 		send();
+
+		if (verify && drawAgain)
+			verifyKept(drawAgain);
 
 		if (verify)
 			verifyFrame(same);

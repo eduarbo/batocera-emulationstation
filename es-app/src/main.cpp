@@ -787,7 +787,7 @@ int main(int argc, char* argv[])
 		if (!onlyChanges)
 			Renderer::swapBuffers();
 		else
-			drawn = Renderer::endFrame();
+			drawn = Renderer::endFrame([&window] { window.render(); });
 
 		int end = SDL_GetTicks();
 		Window::recordFrame(eventMs + end - workStart, drawn, { eventMs, renderStart - updateStart, showStart - renderStart, end - showStart });
