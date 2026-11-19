@@ -14,8 +14,10 @@
 
 #include <SDL.h>
 #include <deque>
+#include <mutex>
 #include <set>
 #include <stack>
+#include <thread>
 
 #if WIN32
 #include <Windows.h>
@@ -412,8 +414,23 @@ namespace Renderer
 	}
 
 
+	// GL and the frame cache live on the thread that made the window. A texture freed on another thread (the
+	// last reference to an image dropped by a loader) waits for it.
+	static std::thread::id           renderThread;
+	static std::mutex                pendingLock;
+	static std::vector<unsigned int> pendingTextures;
+
+	static void destroyPendingTextures();
+
 	bool init()
 	{
+		renderThread = std::this_thread::get_id();
+		{
+			// The textures of an earlier window went with its context
+			std::unique_lock<std::mutex> lock(pendingLock);
+			pendingTextures.clear();
+		}
+
 		if (!createWindow())
 			return false;
 
@@ -424,6 +441,7 @@ namespace Renderer
 
 	void deinit()
 	{
+		destroyPendingTextures();
 		destroyWindow();
 
 	} // deinit
@@ -1110,9 +1128,26 @@ namespace Renderer
 		}
 	}
 
+	static void destroyPendingTextures()
+	{
+		std::vector<unsigned int> textures;
+		{
+			std::unique_lock<std::mutex> lock(pendingLock);
+			textures.swap(pendingTextures);
+		}
+
+		for (auto texture : textures)
+		{
+			FrameCache::textureChanged(texture);
+			Instance()->destroyTexture(texture);
+		}
+	}
+
 	void beginFrame()
 	{
 		using namespace FrameCache;
+
+		destroyPendingTextures();
 
 		frame.commands.clear();
 		frame.vertices.clear();
@@ -1205,6 +1240,13 @@ namespace Renderer
 
 	void  destroyTexture(const unsigned int _texture)
 	{
+		if (std::this_thread::get_id() != renderThread)
+		{
+			std::unique_lock<std::mutex> lock(pendingLock);
+			pendingTextures.push_back(_texture);
+			return;
+		}
+
 		FrameCache::textureChanged(_texture);
 		Instance()->destroyTexture(_texture);
 	}
@@ -1383,6 +1425,8 @@ namespace Renderer
 		}
 		else
 		{
+			destroyPendingTextures();
+
 			// What is on screen now: the textures it uses are as they are
 			FrameCache::shownValid = false;
 			FrameCache::changedTextures.clear();
