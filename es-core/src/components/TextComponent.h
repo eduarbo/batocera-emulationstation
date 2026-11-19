@@ -82,12 +82,17 @@ public:
 	MultiLineType getMultiLine() { return mMultiline; }
 	void setMultiLine(MultiLineType value);
 
+	// At most that many lines of a wrapped text, the last one ending with an ellipsis where the text goes on (0: all)
+	int getMaxLines() { return mMaxLines; }
+	void setMaxLines(int lines);
+
 	bool getBindingDefaults() { return mBindingDefaults; }
 
 	void setBonusTextColor(unsigned int color);
 
 protected:
 	void buildTextCache();
+	std::string wrapLines(const std::string& text, float width);
 	virtual void onTextChanged();
 
 	std::string mText;
@@ -134,6 +139,7 @@ private:
 
 	AutoScrollType mAutoScroll;
 	MultiLineType  mMultiline;
+	int            mMaxLines;
 };
 
 #endif // ES_CORE_COMPONENTS_TEXT_COMPONENT_H

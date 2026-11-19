@@ -3,6 +3,7 @@
 #include "utils/StringUtil.h"
 #include "Log.h"
 #include "Settings.h"
+#include <algorithm>
 
 #define AUTO_SCROLL_RESET_DELAY 6000
 #define AUTO_SCROLL_DELAY 6000 // ms to wait before we start to scroll
@@ -13,7 +14,7 @@ TextComponent::TextComponent(Window* window) : GuiComponent(window),
 	mHorizontalAlignment(ALIGN_LEFT), mVerticalAlignment(ALIGN_CENTER), mLineSpacing(1.5f), mBgColor(0),
 	mRenderBackground(false), mGlowColor(0), mGlowSize(2), mGlowOffset(Vector2f(0,0)), mBindingDefaults(false), mAutoScrollDelay(AUTO_SCROLL_DELAY), mAutoScrollSpeed(AUTO_SCROLL_SPEED),
 	mReflection(0.0f, 0.0f), mReflectOnBorders(false), mAutoScroll(AutoScrollType::NONE), mTextLength(-1), mMultiline(MultiLineType::AUTO),
-	mHasBonusColor(false), mBonusColor(0)
+	mHasBonusColor(false), mBonusColor(0), mMaxLines(0)
 {	
 	mMarqueeOffset = 0;
 	mMarqueeOffset2 = 0;
@@ -26,7 +27,7 @@ TextComponent::TextComponent(Window* window, const std::string& text, const std:
 	mHorizontalAlignment(align), mVerticalAlignment(ALIGN_CENTER), mLineSpacing(1.5f), mBgColor(0),
 	mRenderBackground(false), mGlowColor(0), mGlowSize(2), mGlowOffset(Vector2f(0, 0)), mBindingDefaults(false), mAutoScrollDelay(AUTO_SCROLL_DELAY), mAutoScrollSpeed(AUTO_SCROLL_SPEED),
 	mReflection(0.0f, 0.0f), mReflectOnBorders(false), mAutoScroll(AutoScrollType::NONE), mTextLength(-1), mMultiline(MultiLineType::AUTO),
-	mHasBonusColor(false), mBonusColor(0)
+	mHasBonusColor(false), mBonusColor(0), mMaxLines(0)
 {
 	setFont(font);
 	setColor(color);
@@ -335,7 +336,7 @@ void TextComponent::onTextChanged()
 		if (mMultiline == MultiLineType::SINGLELINE)
 			mSize[1] = mFont->getHeight() + mPadding.y() + mPadding.w();
 		else
-			mSize[1] = mFont->sizeWrappedText(mUppercase ? Utils::String::toUpper(mText) : mText, getSize().x(), mLineSpacing).y() + mPadding.y() + mPadding.w();
+			mSize[1] = mFont->sizeText(wrapLines(mUppercase ? Utils::String::toUpper(mText) : mText, getSize().x()), mLineSpacing).y() + mPadding.y() + mPadding.w();
 	}
 }
 
@@ -405,7 +406,7 @@ void TextComponent::buildTextCache()
 		mTextCache = std::shared_ptr<TextCache>(f->buildTextCache(text, Vector2f(0, 0), color, sx, mHorizontalAlignment, mLineSpacing));
 	}
 	else
-		mTextCache = std::shared_ptr<TextCache>(f->buildTextCache(f->wrapText(text, sx), Vector2f(0, 0), color, sx, mHorizontalAlignment, mLineSpacing));
+		mTextCache = std::shared_ptr<TextCache>(f->buildTextCache(wrapLines(text, sx), Vector2f(0, 0), color, sx, mHorizontalAlignment, mLineSpacing));
 }
 
 void TextComponent::update(int deltaTime)
@@ -679,6 +680,8 @@ void TextComponent::applyTheme(const std::shared_ptr<ThemeData>& theme, const st
 				setMultiLine(MultiLineType::AUTO);
 		}
 
+		setMaxLines(elem->has("maxLines") ? std::max(0, (int)elem->get<float>("maxLines")) : 0);
+
 		if (elem->has("autoScrollDelay"))
 			mAutoScrollDelay = (int) Math::clamp(elem->get<float>("autoScrollDelay"), 0, 1000000);
 
@@ -722,6 +725,53 @@ void TextComponent::setAutoScroll(AutoScrollType value)
 		mMarqueeTime = 0;
 
 	onSizeChanged();	
+}
+
+// The text wrapped at a width; with a line cap, its first lines only, the last one ending with an ellipsis where
+// the text goes on
+std::string TextComponent::wrapLines(const std::string& text, float width)
+{
+	std::string wrapped = mFont->wrapText(text, width);
+	if (mMaxLines <= 0)
+		return wrapped;
+
+	size_t start = 0;
+	for (int line = 1; line < mMaxLines; line++)
+	{
+		start = wrapped.find('\n', start);
+		if (start == std::string::npos)
+			return wrapped;
+
+		start++;
+	}
+
+	size_t end = wrapped.find('\n', start);
+	if (end == std::string::npos)
+		return wrapped;
+
+	const std::string ellipsis = "\xE2\x80\xA6";
+	auto withEllipsis = [](std::string line, const std::string& end)
+	{
+		while (!line.empty() && (line.back() == ' ' || line.back() == ',' || line.back() == ';' || line.back() == ':'))
+			line.pop_back();
+
+		return line + end;
+	};
+
+	std::string last = wrapped.substr(start, end - start);
+	while (!last.empty() && mFont->sizeText(withEllipsis(last, ellipsis)).x() > width)
+		last = last.substr(0, Utils::String::prevCursor(last, last.size()));
+
+	return wrapped.substr(0, start) + withEllipsis(last, ellipsis);
+}
+
+void TextComponent::setMaxLines(int lines)
+{
+	if (mMaxLines == lines)
+		return;
+
+	mMaxLines = lines;
+	onTextChanged();
 }
 
 void TextComponent::setMultiLine(MultiLineType value)

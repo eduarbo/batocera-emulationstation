@@ -294,6 +294,7 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "glowSize", FLOAT },
 		{ "glowOffset", NORMALIZED_PAIR },
 		{ "multiLine", STRING },				// auto, true, false
+		{ "maxLines", FLOAT },					// at most that many lines, the last one ending with an ellipsis (0: all)
 		{ "singleLineScroll", BOOLEAN },
 		{ "autoScroll", STRING },				// horizontal, vertical, none
 		{ "autoScrollDelay", FLOAT },

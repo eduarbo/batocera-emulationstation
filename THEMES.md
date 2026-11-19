@@ -1095,6 +1095,8 @@ Can be created as an extra.
 	- Valid values are "left", "center", or "right".  Controls alignment on the X axis.  "center" will also align vertically.
 * `forceUppercase` - type: BOOLEAN.  Draw text in uppercase.
 * `lineSpacing` - type: FLOAT.  Controls the space between lines (as a multiple of font height).  Default is 1.5.
+* `maxLines` - type: FLOAT.
+	- At most that many lines of a wrapped text: the last one ends with an ellipsis (…) where the text goes on, and a text sized `w 0` is as tall as the lines it keeps.  Default is 0 (every line).
 * `visible` - type: BOOLEAN.
     - If true, component will be rendered, otherwise rendering will be skipped.  Can be used to hide elements from a particular view.
 * `zIndex` - type: FLOAT.
