@@ -72,6 +72,7 @@ VideoComponent::VideoComponent(Window* window) :
 	mIdleStopped(false),
 	mTargetIsMax(false),
 	mTargetIsMin(false),
+	mKeepOrientation(false),
 	mTargetSize(0, 0),
 	mPlayAudio(true)
 {
