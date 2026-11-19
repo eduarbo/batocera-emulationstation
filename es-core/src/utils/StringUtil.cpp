@@ -449,14 +449,17 @@ namespace Utils
 			return word.size() == 6 && word.find_first_not_of("0123456789") == std::string::npos;
 		}
 
-		// The text of one (...) or [...] tag of a dump set: region, languages, revision, version, status
+		// The text of one (...) or [...] tag of a dump set: region, languages, revision, version, status, an arcade
+		// set's note
 		static bool isTitleTag(const std::string& tag)
 		{
 			static const std::vector<std::string> status = {
 				"beta", "proto", "prototype", "demo", "sample", "unl", "alt", "kiosk", "debug", "sgb enhanced",
-				"gb compatible", "rumble version", "virtual console", "!" };
+				"gb compatible", "rumble version", "virtual console", "!", "bootleg", "newer", "older", "earlier",
+				"later", "newer hardware", "older hardware", "newer version", "older version" };
 
-			auto items = split(toLower(tag), ',', true);
+			// MAME's regions come joined with " / " and " + " ("World / USA + Canada")
+			auto items = split(replace(replace(toLower(tag), "/", ","), " + ", ","), ',', true);
 			if (items.empty())
 				return false;
 
@@ -469,7 +472,7 @@ namespace Utils
 				// "Rev 1", "Rev A", "Revision 2", "Version 1.1", "Beta 2", "Alt 1"
 				auto words = split(item, ' ', true);
 				if (words.size() == 2 && (words[0] == "rev" || words[0] == "revision" || words[0] == "version" || words[0] == "ver" ||
-					((words[0] == "beta" || words[0] == "proto" || words[0] == "alt" || words[0] == "demo") && isdigit(words[1][0]))))
+					((words[0] == "beta" || words[0] == "proto" || words[0] == "alt" || words[0] == "demo" || words[0] == "set") && isdigit(words[1][0]))))
 					continue;
 
 				if (std::find(status.cbegin(), status.cend(), item) != status.cend())
