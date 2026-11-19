@@ -1,4 +1,5 @@
 #include "components/ComponentList.h"
+#include "components/NinePatchComponent.h"
 #include "LocaleES.h"
 #include "TextToSpeech.h"
 
@@ -379,6 +380,17 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 	unsigned int textColor = menuTheme->Text.color;
 	bool selectorGradientHorz = menuTheme->Text.selectorGradientType;
 
+	// A theme's frame for the selected row: the row is framed, never filled
+	const MenuRowElement& rowTheme = menuTheme->Row;
+	if (rowTheme.selectorPath.empty())
+		mSelectorFrame = nullptr;
+	else if (mSelectorFrame == nullptr || mSelectorFramePath != rowTheme.selectorPath)
+	{
+		mSelectorFrame = std::make_shared<NinePatchComponent>(mWindow, rowTheme.selectorPath);
+		mSelectorFrame->setCornerSize(rowTheme.selectorCorner, rowTheme.selectorCorner);
+		mSelectorFramePath = rowTheme.selectorPath;
+	}
+
 	Transform4x4f trans = parentTrans * getTransform();
 
 	// clip everything to be inside our bounds (with whole rows only, to the last whole row)
@@ -404,7 +416,15 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 
 		if (y - mCameraOffset + rowHeight >= 0)
 		{
-			if (mFocused && entry.data.selectable && i == mCursor)
+			if (mFocused && entry.data.selectable && i == mCursor && mSelectorFrame != nullptr)
+			{
+				float margin = rowTheme.selectorMargin;
+				mSelectorFrame->setPosition(margin, mSelectorBarOffset);
+				mSelectorFrame->setSize(Math::max(0.0f, mSize.x() - 2 * margin), rowHeight);
+				mSelectorFrame->setOpacity((unsigned char)(255 * opacity));
+				mSelectorFrame->render(trans);
+			}
+			else if (mFocused && entry.data.selectable && i == mCursor)
 			{
 				Renderer::setMatrix(trans);
 
@@ -418,7 +438,7 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 				}
 			}
 
-			if (i == mHotRow)
+			if (i == mHotRow && mSelectorFrame == nullptr)
 			{
 				Renderer::setMatrix(trans);
 

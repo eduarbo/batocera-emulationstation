@@ -184,6 +184,9 @@ struct MenuRowElement
 	float iconSize;	// pixels; 0: 1.25 times the text's letter height
 	bool fullRows;	// lists show whole rows only
 	float valueSpacing;	// pixels between a row's value and its chevron
+	std::string selectorPath;	// the selected row framed by this ninepatch instead of filled (menutext selectorPath)
+	float selectorCorner;	// its corner size, in pixels
+	float selectorMargin;	// pixels between the frame and the list's sides
 };
 
 // A prompt in a menu's header (menuPrompt): back, instead of a BACK button
@@ -269,7 +272,7 @@ public:
 		ButtonElement Button { ":/button.png", ":/button_filled.png", Vector2f(16,16), 0, 0, 0.0f };
 		TextEditElement TextEdit { nullptr, 0 };
 		SliderElement Slider { nullptr, 0, 0, 0.0f, 0.0f };
-		MenuRowElement Row { 0.0f, 10.0f, 0.0f, false, 0.0f };
+		MenuRowElement Row { 0.0f, 10.0f, 0.0f, false, 0.0f, "", 0.0f, 0.0f };
 		PromptElement Prompt { "", nullptr, 0 };
 		bool FooterAtBottom = false;	// menufooter atBottom
 		TileElement Tile { "", "", Vector2f(16, 16) };

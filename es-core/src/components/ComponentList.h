@@ -6,6 +6,9 @@
 #include "LocaleES.h"
 #include "components/ScrollbarComponent.h"
 #include "math/Vector2i.h"
+#include <memory>
+
+class NinePatchComponent;
 
 namespace ComponentListFlags
 {
@@ -138,6 +141,10 @@ private:
 
 	float mSelectorBarOffset;
 	float mCameraOffset;
+
+	// The selected row's frame when the menu theme has one (menutext selectorPath): a border, no fill
+	std::shared_ptr<NinePatchComponent> mSelectorFrame;
+	std::string mSelectorFramePath;
 
 	ComponentListFlags::UpdateType mUpdateType;
 

@@ -660,6 +660,9 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "fullRows", BOOLEAN },
 		{ "valueSpacing", FLOAT },
 		{ "atBottom", BOOLEAN },
+		{ "selectorPath", PATH },				// the selected row framed (a ninepatch) instead of filled
+		{ "selectorCornerSize", FLOAT },
+		{ "selectorMargin", FLOAT },
 		{ "separatorColor", COLOR },
 		{ "selectorColor", COLOR },
 		{ "selectorColorEnd", COLOR },
@@ -2524,6 +2527,12 @@ ThemeData::ThemeMenu::ThemeMenu(ThemeData* theme)
 			Row.fullRows = elem->get<bool>("fullRows");
 		if (elem->has("valueSpacing"))
 			Row.valueSpacing = elem->get<float>("valueSpacing") * Renderer::getScreenWidth();
+		if (elem->has("selectorPath") && ResourceManager::getInstance()->fileExists(elem->get<std::string>("selectorPath")))
+			Row.selectorPath = elem->get<std::string>("selectorPath");
+		if (elem->has("selectorCornerSize"))
+			Row.selectorCorner = elem->get<float>("selectorCornerSize");
+		if (elem->has("selectorMargin"))
+			Row.selectorMargin = elem->get<float>("selectorMargin") * Renderer::getScreenWidth();
 	}
 
 	elem = theme->getElement("menu", "menuprompt", "menuPrompt");

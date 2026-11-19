@@ -1492,6 +1492,13 @@ BATOCERA 5.24
 	- Lists show whole rows only: they scroll by rows and leave out a row they cannot show whole. Default is false.
 * `valueSpacing` - type: FLOAT. (`menutext` only)
 	- The space between a row's value and its chevron, as a fraction of the screen width. Default is 0.005.
+* `selectorPath` - type: PATH. (`menutext` only)
+	- A ninepatch that frames the selected row (and an option list's, a popup's) instead of the selector bar: the
+	  selection is a border; the bar and its hover tint are not drawn. Default: none (the bar).
+* `selectorCornerSize` - type: FLOAT. (`menutext` only)
+	- That ninepatch's corner size, in pixels.
+* `selectorMargin` - type: FLOAT. (`menutext` only)
+	- The space between the frame and the list's sides, as a fraction of the screen width. Default is 0.
 	
 
 #### menuSwitch
