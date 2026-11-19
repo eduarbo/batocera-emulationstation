@@ -30,7 +30,7 @@ GuiMsgBox::GuiMsgBox(Window* window, const std::string& text,
 
 	TextToSpeech::getInstance()->say(text);
 
-	mBackground.setImagePath(theme->Background.path);
+	mBackground.setImagePath(theme->Background.dialogPath.empty() ? theme->Background.path : theme->Background.dialogPath);
 	mBackground.setEdgeColor(theme->Background.color);
 	mBackground.setCenterColor(theme->Background.centerColor);
 	mBackground.setCornerSize(theme->Background.cornerSize);

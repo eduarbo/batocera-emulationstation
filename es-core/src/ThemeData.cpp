@@ -658,6 +658,7 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 	{ "menuBackground", {
 		{ "path", PATH },
 		{ "fadePath", PATH },
+		{ "dialogPath", PATH },
 		{ "color", COLOR },
 		{ "centerColor", COLOR },
 		{ "cornerSize", NORMALIZED_PAIR },
@@ -702,7 +703,10 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 	{ "menuButton",{
 		{ "cornerSize", NORMALIZED_PAIR },
 		{ "path", PATH },
-		{ "filledPath", PATH } } },
+		{ "filledPath", PATH },
+		{ "color", COLOR },
+		{ "filledColor", COLOR },
+		{ "height", FLOAT } } },
 };
 
 std::shared_ptr<ThemeData::ThemeMenu> ThemeData::mMenuTheme;
@@ -2351,6 +2355,9 @@ ThemeData::ThemeMenu::ThemeMenu(ThemeData* theme)
 		if (elem->has("fadePath") && ResourceManager::getInstance()->fileExists(elem->get<std::string>("fadePath")))
 			Background.fadePath = elem->get<std::string>("fadePath");
 
+		if (elem->has("dialogPath") && ResourceManager::getInstance()->fileExists(elem->get<std::string>("dialogPath")))
+			Background.dialogPath = elem->get<std::string>("dialogPath");
+
 		if (elem->has("color"))
 		{
 			Background.color = elem->get<unsigned int>("color");
@@ -2494,6 +2501,12 @@ ThemeData::ThemeMenu::ThemeMenu(ThemeData* theme)
 			Button.filledPath = elem->get<std::string>("filledPath");
 		if (elem->has("cornerSize"))
 			Button.cornerSize = elem->get<Vector2f>("cornerSize");
+		if (elem->has("color"))
+			Button.color = elem->get<unsigned int>("color");
+		if (elem->has("filledColor"))
+			Button.filledColor = elem->get<unsigned int>("filledColor");
+		if (elem->has("height"))
+			Button.height = elem->get<float>("height") * Renderer::getScreenHeight();
 	}
 
 	elem = theme->getElement("menu", "menutextedit", "menuTextEdit");

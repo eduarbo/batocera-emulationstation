@@ -824,14 +824,15 @@ ES versions with slides support the feature `slideshow`.
 #### menu
 * `helpsystem name="help"` - ALL
 	- The help system style for this view. If not defined, menus will have the same helpsystem as defined in system view.
-* `menuBackground name="menubg"` - COLOR | PATH | FADEPATH
+* `menuBackground name="menubg"` - COLOR | PATH | FADEPATH | DIALOGPATH
 	- The background behind menus. you can set an image and/or change color (alpha supported)
+	- `dialogPath`: the background of message boxes, with the same corner size (default: `path`)
 	
 * `menuSwitch name="menuswitch"` - PATHON | PATHOFF
 	- Images for the on/off switch in menus
 * `menuSlider name="menuslider"` - PATH
 	- Image for the slider knob in menus
-* `menuButton name="menubutton"` - PATH | FILLEDPATH
+* `menuButton name="menubutton"` - PATH | FILLEDPATH | CORNERSIZE | COLOR | FILLEDCOLOR | HEIGHT
 	- Images for menu buttons
 * `menuTextEdit name="menutextedit"` - ACTIVE | INACTIVE | FONTPATH | FONTSIZE | CARETCOLOR
 	- The text field of the on-screen keyboard and other text popups
@@ -1479,6 +1480,14 @@ BATOCERA 5.24 - replace the button images in menus
   - Image path when the button is not selected
 * `filledPath` - type: PATH. 
   - Image path when the button is selected.
+* `cornerSize` - type: NORMALIZED_PAIR.
+  - The images' corner size, in pixels. Default is `16 16`.
+* `color` - type: COLOR.
+  - The tint of `path`. Default: the menu text's colour. `FFFFFFFF` draws the image as it is.
+* `filledColor` - type: COLOR.
+  - The tint of `filledPath`. Default: `menutext`'s `selectorColor`. `FFFFFFFF` draws the image as it is.
+* `height` - type: FLOAT.
+  - The buttons' least height, as a fraction of the screen height. Default: the label's height.
 
 #### menuTextEdit
 

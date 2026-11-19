@@ -131,6 +131,7 @@ struct MenuBackground
 	std::string		path;
 	std::string		fadePath;	
 	Vector2f		cornerSize;	
+	std::string		dialogPath;		// message boxes; empty: path
 
 	unsigned int	scrollbarColor;
 	float			scrollbarSize;
@@ -170,6 +171,9 @@ struct ButtonElement
 	std::string path;
 	std::string filledPath;
 	Vector2f	cornerSize;
+	unsigned int color;			// path's tint; 0: the menu text's colour
+	unsigned int filledColor;	// filledPath's tint; 0: the selector's colour
+	float		height;			// minimum height in pixels; 0: the label's
 };
 
 // The text field of the on-screen keyboard and of other text popups (menuTextEdit)
@@ -204,14 +208,14 @@ public:
 	public:
 		ThemeMenu(ThemeData* theme);
 
-		MenuBackground Background{ 0xFFFFFFFF, 0xFFFFFFFF, ":/frame.png", ":/scroll_gradient.png", Vector2f(16, 16), 0, 0.0025f, 0.01f, "innerright" };
+		MenuBackground Background{ 0xFFFFFFFF, 0xFFFFFFFF, ":/frame.png", ":/scroll_gradient.png", Vector2f(16, 16), "", 0, 0.0025f, 0.01f, "innerright" };
 		MenuElement Title{ 0x555555FF, 0x555555FF, 0x555555FF, 0xFFFFFFFF, 0x555555FF, true, "", nullptr };
 		MenuElement Text{ 0x777777FF, 0xFFFFFFFF, 0x878787FF, 0xC6C7C6FF, 0x878787FF, true, "", nullptr };
 		MenuElement TextSmall{ 0x777777FF, 0xFFFFFFFF, 0x878787FF, 0xC6C7C6FF, 0x878787FF, true, "", nullptr };
 		MenuElement Footer{ 0xC6C6C6FF, 0xC6C6C6FF, 0xC6C6C6FF, 0xFFFFFFFF, 0xC6C6C6FF, true, "", nullptr };
 		MenuGroupElement Group{ 0x777777FF, 0x00000010, 0xC6C7C6FF, 2.0, "", nullptr, 0 /*ALIGN_LEFT*/, false };
 		IconElement Icons { ":/on.svg", ":/off.svg", ":/auto.svg", ":/option_arrow.svg", ":/arrow.svg", ":/slider_knob.svg", ":/textinput_ninepatch.png", ":/textinput_ninepatch_active.png" };
-		ButtonElement Button { ":/button.png", ":/button_filled.png", Vector2f(16,16) };
+		ButtonElement Button { ":/button.png", ":/button_filled.png", Vector2f(16,16), 0, 0, 0.0f };
 		TextEditElement TextEdit { nullptr, 0 };
 		KeyboardElement Keyboard { "", "", "", Vector2f(16, 16), 0.0f, 0xFFFFFFFF, 0xFFFFFFFF, nullptr, false, false };
 

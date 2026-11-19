@@ -20,8 +20,8 @@ ButtonComponent::ButtonComponent(Window* window, const std::string& text, const 
 	mFont = menuTheme->Text.font;
 	mTextColorUnfocused = menuTheme->Text.color;
 	mTextColorFocused = menuTheme->Text.selectedColor;
-	mColor = menuTheme->Text.color;
-	mColorFocused = menuTheme->Text.selectorColor;
+	mColor = menuTheme->Button.color ? menuTheme->Button.color : menuTheme->Text.color;
+	mColorFocused = menuTheme->Button.filledColor ? menuTheme->Button.filledColor : menuTheme->Text.selectorColor;
 	mBox.setCornerSize(menuTheme->Button.cornerSize);
 	mRenderNonFocusedBackground = true;
 
@@ -77,7 +77,7 @@ void ButtonComponent::setText(const std::string& text, const std::string& helpTe
 
 	float padding = TEXT_PADDING;
 	float minWidth = mFont->sizeText("DELETE").x() + padding;
-	setSize(Math::max(mTextCache->metrics.size.x() + padding, minWidth), mTextCache->metrics.size.y());
+	setSize(Math::max(mTextCache->metrics.size.x() + padding, minWidth), Math::max(mTextCache->metrics.size.y(), ThemeData::getMenuTheme()->Button.height));
 
 	updateHelpPrompts();
 }
