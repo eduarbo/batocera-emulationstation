@@ -134,6 +134,16 @@ void SystemView::reloadTheme(SystemData* system)
 	const std::shared_ptr<ThemeData>& theme = system->getTheme();
 	getViewElements(theme);
 
+	// Extras kept for the system's tab were made from its old theme
+	auto parked = mParkedExtras.find(system);
+	if (parked != mParkedExtras.cend())
+	{
+		for (auto extra : parked->second)
+			delete extra;
+
+		mParkedExtras.erase(parked);
+	}
+
 	int idx = -1;
 	for (int i = 0; i < mEntries.size(); i++)
 	{
@@ -417,8 +427,9 @@ void SystemView::goToSystem(SystemData* system, bool animate)
 			if (current != nullptr)
 				mTabCursors[mActiveTab] = current->getName();
 
+			// The tabs' extras are kept, those made ahead with them
 			mActiveTab = it->second;
-			populate();
+			populate(true);
 		}
 	}
 
