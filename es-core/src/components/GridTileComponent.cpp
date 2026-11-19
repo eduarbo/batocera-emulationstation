@@ -1317,11 +1317,15 @@ void GridTileComponent::setSelected(bool selected, bool allowAnimation, Vector3f
 			};
 
 			cancelAnimation(3);
-			setAnimation(new LambdaAnimation(func, 250), 0, [this, startsVideo] {
+
+			// The video's own delay starts with the selection, not after the zoom: it is sized for the selected
+			// tile already, and shows only after its delay
+			if (startsVideo)
+				startVideo();
+
+			setAnimation(new LambdaAnimation(func, 250), 0, [this] {
 				this->setSelectedZoom(1);
 				mAnimPosition = Vector3f(0, 0, 0);
-				if (startsVideo)
-					startVideo();
 			}, false, 3);
 		}
 	}
