@@ -173,11 +173,11 @@ void TextComponent::render(const Transform4x4f& parentTrans)
 	{
 		if (mExtraType == ExtraType::EXTRACHILDREN && mVerticalAlignment == Alignment::ALIGN_TOP && mMultiline == MultiLineType::MULTILINE && mAutoScroll == AutoScrollType::NONE)
 		{
-			// Clip multiline - non partial lines
+			// Clip multiline - non partial lines (a box made as tall as its lines, then rounded on screen, keeps them)
 			auto lineHeight = mFont->getHeight(mLineSpacing);
 			if (lineHeight > 0)
 			{
-				auto lines = (int)(rect.h / lineHeight);
+				auto lines = std::max(1, (int)((rect.h + 1) / lineHeight));
 				rect.h = lineHeight * lines + 1;
 			}
 
