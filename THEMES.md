@@ -981,8 +981,10 @@ Can be created as an extra.
 
 Can be created as an extra.
 
-A file VLC cannot read (empty, truncated, not a video; it has 2 seconds to read the tracks) is no video: the
-snapshot shows, and the file is not tried again until its size changes.
+A file VLC cannot read (empty, truncated, not a video) is no video: the snapshot shows, and the file is not
+tried again until its size changes. VLC has 2 seconds to read the tracks, counted from when its reader takes
+the file; ES waits for its answer up to 10 seconds. A file that ran out of time counts as no video for now and
+is read again 30 seconds later; after three such timeouts it counts as no video like a file VLC cannot read.
 
 * `pos` - type: NORMALIZED_PAIR.
 * `size` - type: NORMALIZED_PAIR.
@@ -1013,6 +1015,11 @@ snapshot shows, and the file is not tried again until its size changes.
     - BATOCERA 5.24 : Tells if the element is visible or hidden.
 * `snapshotSource` - type: STRING.
     - BATOCERA 5.24 : Defines which image to show during delay. Values can be  image, thumbnail, and marquee.
+* `snapshot` - type: PATH.
+    - The picture the video replaces, for instance a bound capture (`<snapshot>{game:image}</snapshot>`): it
+      shows until the video plays and when there is none (with `showSnapshotNoVideo` and `showSnapshotDelay`),
+      at the video's size, round corners, colour and saturation (bound ones included); once the video plays
+      nothing of it shows, whatever their sizes.
 * `effect` - type: STRING.
     - BATOCERA 5.24 : Defines the transition in effect when the video is first loaded. Values can be slideRight, size, bump, or none. The default is bump.
 * `x`, 'y', 'w', 'h' - type: FLOAT.    
@@ -1207,17 +1214,34 @@ elements (a screen filter, a frame) are drawn over the captures, the dots over t
       (default 4 px at 480), `dotsOffset` the distance of the row from the element's top-right corner, as
       fractions of the screen (default 9 px, 9 px). The current dot is wider.
 
+##### Asking for drawing only changes, the idle pause and shown-only bindings
+
+A theme turns these on with variables; without them ES draws every frame, has no idle pause and binds every
+element:
+
+```xml
+<variables>
+	<esRenderOnChange>true</esRenderOnChange>	<!-- draw only what changes -->
+	<esIdlePause>60</esIdlePause>				<!-- seconds without input before the idle pause; 0 never -->
+	<esBindShownOnly>true</esBindShownOnly>		<!-- leave a hidden container's elements unbound -->
+</variables>
+```
+
+The es_settings keys `RenderOnChange` and `BindShownOnly` ("auto", the default, follows the theme; "true" or
+"false" hold for every theme) and `IdlePause` (-1, the default, follows the theme; or seconds) override them.
+
 ##### Drawing only what changes
 
-With `RenderOnChange` (es_settings, default true), the home and the game lists, with nothing over them, draw
-and show a frame only when it differs from the frame on screen or a texture it uses changed (a video's new
-frame), and at least once a second; otherwise the screen keeps its frame and ES waits for the next frame's time
-or an event. `RenderOnChangeVerify` (for tests) draws every frame and logs any frame the cache would have left
-out whose pixels changed; `DrawFramerate` shows the frames drawn per second.
+With drawing only changes on (`esRenderOnChange` or `RenderOnChange`), the home and the game lists, with nothing
+over them, draw and show a frame only when it differs from the frame on screen or a texture it uses changed (a
+video's new frame), and at least once a second; otherwise the screen keeps its frame and ES waits for the next
+frame's time or an event. `RenderOnChangeVerify` (for tests) draws every frame, logs any frame the cache would
+have left out whose pixels changed, and draws each frame a second time without the cache to compare;
+`DrawFramerate` shows the frames drawn per second.
 
 ##### Idle pause
 
-After `IdlePause` seconds without input (es_settings, default 60; 0 never), the videos of the views stop at the
+After the idle pause's seconds without input (`esIdlePause` or `IdlePause`), the videos of the views stop at the
 end of their loop and show their snapshot or what is under them (`IdlePauseVideo`, default true; the system
 view's panel moves on to no other suggestion), and slideshows finish the change under way and stay on their
 capture (`IdlePauseSlides`, default true). Any input resumes them; so does a resume from system suspend, which
