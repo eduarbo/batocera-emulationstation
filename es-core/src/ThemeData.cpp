@@ -1210,7 +1210,14 @@ bool ThemeData::parseFilterAttributes(const pugi::xml_node& node)
 			}
 			catch (std::domain_error& e)
 			{
-				LOG(LogError) << "if \"" << ifAttribute << "\" expression is invalid : " << e.what();
+				// A theme read without a system (the menus' theme) has no system variables: a condition on one only
+				// leaves its part out there
+				if (mEvaluatorVariables.find("system.name") == mEvaluatorVariables.cend() && ifAttribute.find("{system.") != std::string::npos &&
+					std::string(e.what()).find("Unable to find the variable 'system.") == 0)
+					LOG(LogDebug) << "if \"" << ifAttribute << "\" left out: no system";
+				else
+					LOG(LogError) << "if \"" << ifAttribute << "\" expression is invalid : " << e.what();
+
 				return false;
 			}
 		}
