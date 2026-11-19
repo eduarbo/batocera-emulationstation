@@ -697,6 +697,17 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "fontPath", PATH },
 		{ "fontSize", FLOAT },
 		{ "color", COLOR } } },
+	{ "menuScreenSaver",{
+		{ "fontPath", PATH },
+		{ "fontSize", FLOAT },
+		{ "color", COLOR },
+		{ "systemFontPath", PATH },
+		{ "systemFontSize", FLOAT },
+		{ "systemColor", COLOR },
+		{ "scrimPath", PATH },
+		{ "scrimHeight", FLOAT },
+		{ "screenSystems", STRING },
+		{ "systemNames", STRING } } },
 	{ "menuTile",{
 		{ "path", PATH },
 		{ "selectedPath", PATH },
@@ -2564,6 +2575,42 @@ ThemeData::ThemeMenu::ThemeMenu(ThemeData* theme)
 			TextEdit.font = Font::getFromTheme(elem, ThemeFlags::ALL, Font::get(FONT_SIZE_MEDIUM), true);
 		if (elem->has("caretColor"))
 			TextEdit.caretColor = elem->get<unsigned int>("caretColor");
+	}
+
+	elem = theme->getElement("menu", "menuscreensaver", "menuScreenSaver");
+	if (elem)
+	{
+		float sh = (float)Math::min(Renderer::getScreenHeight(), Renderer::getScreenWidth());
+
+		ScreenSaver.themed = true;
+		ScreenSaver.font = (elem->has("fontPath") || elem->has("fontSize")) ? Font::getFromTheme(elem, ThemeFlags::ALL, Font::get(FONT_SIZE_MEDIUM), true) : Text.font;
+		if (elem->has("color"))
+			ScreenSaver.color = elem->get<unsigned int>("color");
+
+		std::string systemPath = elem->has("systemFontPath") ? elem->get<std::string>("systemFontPath") : ScreenSaver.font->getPath();
+		int systemSize = elem->has("systemFontSize") ? (int)(sh * elem->get<float>("systemFontSize")) : 0;
+		ScreenSaver.systemFont = systemSize > 0 ? Font::get(systemSize, systemPath, true) : TextSmall.font;
+		if (elem->has("systemColor"))
+			ScreenSaver.systemColor = elem->get<unsigned int>("systemColor");
+
+		if (elem->has("scrimPath") && ResourceManager::getInstance()->fileExists(elem->get<std::string>("scrimPath")))
+			ScreenSaver.scrimPath = elem->get<std::string>("scrimPath");
+		if (elem->has("scrimHeight"))
+			ScreenSaver.scrimHeight = elem->get<float>("scrimHeight") * Renderer::getScreenHeight();
+
+		if (elem->has("screenSystems"))
+			ScreenSaver.screenSystems = Utils::String::split(elem->get<std::string>("screenSystems"), ' ', true);
+
+		// "snes=Super Nintendo; nes=Nintendo NES"
+		if (elem->has("systemNames"))
+		{
+			for (auto pair : Utils::String::split(elem->get<std::string>("systemNames"), ';', true))
+			{
+				auto eq = pair.find('=');
+				if (eq != std::string::npos)
+					ScreenSaver.systemNames[Utils::String::trim(pair.substr(0, eq))] = Utils::String::trim(pair.substr(eq + 1));
+			}
+		}
 	}
 
 	elem = theme->getElement("menu", "menutile", "menuTile");

@@ -526,6 +526,8 @@ GameScreenSaverBase::GameScreenSaverBase(Window* window) : GuiComponent(window),
 	mViewport(0, 0, Renderer::getScreenWidth(), Renderer::getScreenHeight())
 {
 	mDecoration = nullptr;
+	mScrim = nullptr;
+	mScreenShape = false;
 	mMarquee = nullptr;
 	mLabelGame = nullptr;
 	mLabelSystem = nullptr;
@@ -578,6 +580,12 @@ GameScreenSaverBase::~GameScreenSaverBase()
 		mDecoration = nullptr;
 	}
 
+	if (mScrim != nullptr)
+	{
+		delete mScrim;
+		mScrim = nullptr;
+	}
+
 	if (mLabelGame != nullptr)
 	{
 		delete mLabelGame;
@@ -610,6 +618,20 @@ GameScreenSaverBase::~GameScreenSaverBase()
 
 void GameScreenSaverBase::setGame(FileData* game)
 {	
+	if (mScrim != nullptr)
+	{
+		delete mScrim;
+		mScrim = nullptr;
+	}
+
+	auto& theme = ThemeData::getMenuTheme()->ScreenSaver;
+	mScreenShape = false;
+	if (theme.themed && game != nullptr)
+	{
+		auto system = game->getSourceFileData()->getSystem()->getName();
+		mScreenShape = std::find(theme.screenSystems.cbegin(), theme.screenSystems.cend(), system) != theme.screenSystems.cend();
+	}
+
 	if (mLabelGame != nullptr)
 	{
 		delete mLabelGame;
@@ -770,6 +792,66 @@ void GameScreenSaverBase::setGame(FileData* game)
 	mLabelSystem->setGlowSize(2);
 	mLabelSystem->setFont(ph, sz * 0.66);
 	mLabelSystem->setText(game->getSystem()->getFullName());
+
+	if (!theme.themed)
+		return;
+
+	// The theme's names (menuScreenSaver): the game's name as text, not its marquee, over the theme's scrim at the
+	// screen's bottom, left at the menus' margin and without an outline; the system as the theme names it
+	if (mMarquee != nullptr)
+	{
+		delete mMarquee;
+		mMarquee = nullptr;
+	}
+
+	float margin = ThemeData::getMenuTheme()->Row.padding;
+	float bottom = mViewport.y + mViewport.h;
+	float gameHeight = theme.font->getHeight();
+	float systemHeight = theme.systemFont->getHeight();
+	float scrimHeight = theme.scrimHeight > 0 ? theme.scrimHeight : gameHeight + systemHeight + 2 * margin;
+
+	if (!theme.scrimPath.empty())
+	{
+		mScrim = new ImageComponent(mWindow, true);
+		mScrim->setImage(theme.scrimPath);
+		mScrim->setResize(mViewport.w, scrimHeight);
+		mScrim->setPosition(mViewport.x, bottom - scrimHeight);
+	}
+
+	// The two lines in the scrim's lower part: under them as much space as on the scrim's sides
+	float systemTop = Math::round(bottom - margin * 0.6f - systemHeight);
+	float gameTop = systemTop - gameHeight;
+
+	auto system = game->getSourceFileData()->getSystem();
+	auto name = theme.systemNames.find(system->getName());
+
+	for (auto label : { mLabelGame, mLabelSystem })
+	{
+		label->setHorizontalAlignment(EsLocale::isRTL() ? ALIGN_RIGHT : ALIGN_LEFT);
+		label->setVerticalAlignment(ALIGN_CENTER);
+		label->setGlowSize(0);
+		label->setMultiLine(TextComponent::MultiLineType::SINGLELINE);
+	}
+
+	mLabelGame->setFont(theme.font);
+	mLabelGame->setColor(theme.color);
+	mLabelGame->setPosition(mViewport.x + margin, gameTop);
+	mLabelGame->setSize(mViewport.w - 2 * margin, gameHeight);
+
+	mLabelSystem->setFont(theme.systemFont);
+	mLabelSystem->setColor(theme.systemColor);
+	mLabelSystem->setText(name != theme.systemNames.cend() ? name->second : system->getFullName());
+	mLabelSystem->setPosition(mViewport.x + margin, systemTop);
+	mLabelSystem->setSize(mViewport.w - 2 * margin, systemHeight);
+}
+
+void GameScreenSaverBase::renderScrim(const Transform4x4f& transform, unsigned char opacity)
+{
+	if (mScrim == nullptr || mLabelGame == nullptr)
+		return;
+
+	mScrim->setOpacity(opacity);
+	mScrim->render(transform);
 }
 
 void GameScreenSaverBase::applyBezelInfo(const std::string& infoFile)
@@ -817,6 +899,8 @@ void GameScreenSaverBase::applyBezelInfo(const std::string& infoFile)
 
 void GameScreenSaverBase::render(const Transform4x4f& transform)
 {
+	renderScrim(transform, mOpacity);
+
 	if (mMarquee)
 	{
 		mMarquee->setOpacity(mOpacity);
@@ -933,7 +1017,13 @@ void ImageScreenSaver::setImage(const std::string path)
 		mImage->setOrigin(0.5f, 0.5f);
 		mImage->setPosition(mViewport.x + mViewport.w / 2.0f, mViewport.y + mViewport.h / 2.0f);
 
-		if (Settings::getInstance()->getBool("SlideshowScreenSaverStretch"))
+		// A system the theme shows at its screen's shape: the picture fills the screen at 4:3 (3:4 when upright)
+		if (mScreenShape)
+		{
+			mImage->setKeepOrientation(true);
+			mImage->setResize((float)mViewport.w, (float)mViewport.h);
+		}
+		else if (Settings::getInstance()->getBool("SlideshowScreenSaverStretch"))
 			mImage->setMinSize((float)mViewport.w, (float)mViewport.h);
 		else
 			mImage->setMaxSize((float)mViewport.w, (float)mViewport.h);
@@ -997,7 +1087,12 @@ void VideoScreenSaver::setVideo(const std::string path)
 		
 		mVideo->setPosition(mViewport.x + mViewport.w / 2.0f, mViewport.y + mViewport.h / 2.0f);
 
-		if (Settings::getInstance()->getBool("StretchVideoOnScreenSaver"))
+		if (mScreenShape)
+		{
+			mVideo->setKeepOrientation(true);
+			mVideo->setResize((float)mViewport.w, (float)mViewport.h);
+		}
+		else if (Settings::getInstance()->getBool("StretchVideoOnScreenSaver"))
 			mVideo->setMinSize((float)mViewport.w, (float)mViewport.h);
 		else
 			mVideo->setMaxSize((float)mViewport.w, (float)mViewport.h);
@@ -1043,6 +1138,9 @@ void VideoScreenSaver::render(const Transform4x4f& transform)
 
 	if (Settings::getInstance()->getString("ScreenSaverGameInfo") != "never")
 	{
+		if (mFade != 0)
+			renderScrim(transform, mOpacity * mFade);
+
 		if (mMarquee && mFade != 0)
 		{
 			mMarquee->setOpacity(mOpacity * mFade);

@@ -211,6 +211,21 @@ struct TextEditElement
 	unsigned int caretColor;	// 0: the menu text's colour, dimmed while the field is not edited
 };
 
+// The screensaver's names and the systems whose pictures take the screen's shape (menuScreenSaver); the stock
+// screensaver while it is not set
+struct ScreenSaverElement
+{
+	bool themed;
+	std::shared_ptr<Font> font;			// the game's name
+	unsigned int color;
+	std::shared_ptr<Font> systemFont;	// the system's name
+	unsigned int systemColor;
+	std::string scrimPath;				// under both names, across the screen's bottom
+	float scrimHeight;					// pixels
+	std::vector<std::string> screenSystems;				// systems (names) shown at the screen's 4:3, 3:4 upright
+	std::map<std::string, std::string> systemNames;	// system name -> the name shown
+};
+
 // The tiles of a menu's image grid, the save states' (menuTile); the stock look while path is empty
 struct TileElement
 {
@@ -258,6 +273,7 @@ public:
 		PromptElement Prompt { "", nullptr, 0 };
 		bool FooterAtBottom = false;	// menufooter atBottom
 		TileElement Tile { "", "", Vector2f(16, 16) };
+		ScreenSaverElement ScreenSaver { false, nullptr, 0xFFFFFFFF, nullptr, 0xD0D0D0FF, "", 0.0f, {}, {} };
 		KeyboardElement Keyboard { "", "", "", Vector2f(16, 16), 0.0f, 0xFFFFFFFF, 0xFFFFFFFF, nullptr, false, false };
 
 		std::string getMenuIcon(const std::string name)

@@ -838,6 +838,8 @@ ES versions with slides support the feature `slideshow`.
 	- The text field of the on-screen keyboard and other text popups
 * `menuPrompt name="menuprompt"` - PATH | FONTPATH | FONTSIZE | COLOR
 	- The back prompt right of a menu's title, instead of a BACK button
+* `menuScreenSaver name="menuscreensaver"` - FONTPATH | FONTSIZE | COLOR | SYSTEMFONTPATH | SYSTEMFONTSIZE | SYSTEMCOLOR | SCRIMPATH | SCRIMHEIGHT | SCREENSYSTEMS | SYSTEMNAMES
+	- The screensaver's names and pictures
 * `menuTile name="menutile"` - PATH | SELECTEDPATH | CORNERSIZE
 	- The tiles of a menu's image grid (the save states)
 * `menuKeyboard name="menukeyboard"` - PATH | FOCUSEDPATH | ACTIVEPATH | CORNERSIZE | SPACING | FONTPATH | FONTSIZE | COLOR | SELECTEDCOLOR | WORDKEYS | FOCUSKEYS
@@ -1550,6 +1552,32 @@ the image and BACK in the catalogue, written with a first capital. Without `path
   - Default: `menutextsmall`'s font.
 * `color` - type: COLOR.
   - Default: `menutextsmall`'s colour.
+
+#### menuScreenSaver
+
+The screensaver's names and pictures (`menuScreenSaver name="menuscreensaver"`). With it the slideshow and video
+screensavers show the game's name as text (not its marquee) and the system's name under it, left aligned at the
+menus' row margin, without an outline, over the scrim. Without it the screensaver is unchanged.
+
+* `fontPath` - type: PATH.
+* `fontSize` - type: FLOAT.
+  - The game's name. Default: `menutext`'s font.
+* `color` - type: COLOR.
+  - Default is FFFFFFFF.
+* `systemFontPath` - type: PATH.
+* `systemFontSize` - type: FLOAT.
+  - The system's name. Default: `menutextsmall`'s font.
+* `systemColor` - type: COLOR.
+  - Default is D0D0D0FF.
+* `scrimPath` - type: PATH.
+  - An image stretched across the screen's bottom under both names.
+* `scrimHeight` - type: FLOAT.
+  - The scrim's height, as a fraction of the screen height. Default: both names and a margin.
+* `screenSystems` - type: STRING.
+  - Systems (names, separated by spaces) whose pictures and videos take the screen's shape, at 4:3 (3:4 for one
+    taller than wide), as a TV showed them, instead of their own.
+* `systemNames` - type: STRING.
+  - Names for systems instead of their full names: `snes=Super Nintendo;nes=Nintendo NES`.
 
 #### menuTile
 

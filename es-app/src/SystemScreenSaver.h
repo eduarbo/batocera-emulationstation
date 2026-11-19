@@ -32,8 +32,12 @@ protected:
 	TextComponent*		mLabelTime;
 
 	ImageComponent*		mDecoration;
+	ImageComponent*		mScrim;
 
 	Renderer::Rect		mViewport;
+	bool				mScreenShape;	// the theme shows this game's system at its screen's shape
+
+	void renderScrim(const Transform4x4f& transform, unsigned char opacity);
 
 	int 				mDateTimeUpdateAccumulator;
 	time_t				mDateTimeLastUpdate;
