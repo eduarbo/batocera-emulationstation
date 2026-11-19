@@ -4,7 +4,7 @@
 #include "components/ImageComponent.h"
 #include "components/TextComponent.h"
 
-StackPanelComponent::StackPanelComponent(Window* window) : GuiComponent(window), mHorizontal(true), mReverse(false), mSeparator(0.0f)
+StackPanelComponent::StackPanelComponent(Window* window) : GuiComponent(window), mHorizontal(true), mReverse(false), mFillLast(false), mSeparator(0.0f)
 {
 	mClipChildren = true;
 }
@@ -49,6 +49,8 @@ void StackPanelComponent::applyTheme(const std::shared_ptr<ThemeData>& theme, co
 
 	if (elem->has("reverse"))
 		mReverse = elem->get<bool>("reverse");
+
+	mFillLast = elem->has("fillLast") && elem->get<bool>("fillLast");
 
 	if (elem->has("separator"))
 	{
@@ -201,6 +203,23 @@ void StackPanelComponent::performLayout()
 				if (child->getSize().y() > 0)
 					pos += child->getSize().y() + mSeparator;
 			}
+		}
+	}
+
+	// The last element shown takes the room left under the others (a text then keeps the whole lines it holds)
+	if (mFillLast && !mHorizontal && !mReverse)
+	{
+		GuiComponent* last = nullptr;
+		for (auto child : mChildren)
+			if (child->isVisible())
+				last = child;
+
+		if (last != nullptr)
+		{
+			float top = last->getPosition().y() - last->getSize().y() * last->getOrigin().y();
+			float room = Math::max(0.0f, mSize.y() - top);
+			if (room > 0 && last->getSize().y() != room)
+				last->setSize(last->getSize().x(), room);
 		}
 	}
 }

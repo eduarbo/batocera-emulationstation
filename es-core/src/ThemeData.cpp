@@ -80,6 +80,7 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "orientation", STRING },			// horizontal, vertical
 		{ "reverse", BOOLEAN },
 		{ "separator", FLOAT },
+		{ "fillLast", BOOLEAN },				// vertical: the last element shown takes the room left
 		{ "opacity", FLOAT },
 		{ "visible", BOOLEAN },
 		{ "clipChildren", BOOLEAN },

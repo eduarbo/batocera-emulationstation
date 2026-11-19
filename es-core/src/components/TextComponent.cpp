@@ -735,8 +735,17 @@ std::string TextComponent::wrapLines(const std::string& text, float width)
 	if (mMaxLines <= 0)
 		return wrapped;
 
+	// A box of a height of its own (not one fitted to the text) keeps the whole lines it holds
+	int maxLines = mMaxLines;
+	if (!mAutoCalcExtent.y() && mSize.y() > 0)
+	{
+		float lineHeight = mFont->getHeight(mLineSpacing);
+		if (lineHeight > 0)
+			maxLines = std::min(maxLines, std::max(1, (int)((mSize.y() - mPadding.y() - mPadding.w() + 1.0f) / lineHeight)));
+	}
+
 	size_t start = 0;
-	for (int line = 1; line < mMaxLines; line++)
+	for (int line = 1; line < maxLines; line++)
 	{
 		start = wrapped.find('\n', start);
 		if (start == std::string::npos)

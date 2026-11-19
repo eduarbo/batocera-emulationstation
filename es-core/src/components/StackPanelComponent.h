@@ -28,6 +28,8 @@ private:
 
 	bool mHorizontal;
 	bool mReverse;
+	// Vertical: the last element shown takes the room left under the others
+	bool mFillLast;
 
 	float mSeparator;
 

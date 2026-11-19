@@ -1107,7 +1107,7 @@ Can be created as an extra.
 * `forceUppercase` - type: BOOLEAN.  Draw text in uppercase.
 * `lineSpacing` - type: FLOAT.  Controls the space between lines (as a multiple of font height).  Default is 1.5.
 * `maxLines` - type: FLOAT.
-	- At most that many lines of a wrapped text: the last one ends with an ellipsis (…) where the text goes on, and a text sized `w 0` is as tall as the lines it keeps.  Default is 0 (every line).
+	- At most that many lines of a wrapped text: the last one ends with an ellipsis (…) where the text goes on, and a text sized `w 0` is as tall as the lines it keeps.  A box of a height of its own keeps no more lines than it holds whole.  Default is 0 (every line).
 * `visible` - type: BOOLEAN.
     - If true, component will be rendered, otherwise rendering will be skipped.  Can be used to hide elements from a particular view.
 * `zIndex` - type: FLOAT.
@@ -1134,6 +1134,16 @@ Can be created as an extra.
     - BATOCERA 29 : Point around which the image scale will be applyed.
 * `storyboard' - type: STORYBOARD.    
     - BATOCERA 29 : See storyboard documentation.
+
+#### stackpanel
+
+Can be created as an extra; its children are laid out one after the other.
+
+* `orientation` - type: STRING.  "horizontal" (default) or "vertical".
+* `reverse` - type: BOOLEAN.  From the right (or the bottom).
+* `separator` - type: FLOAT.  The gap between children, in pixels (or a fraction of the panel's height or width under 1).
+* `fillLast` - type: BOOLEAN.
+	- Vertical: the last child shown takes the room left under the others (a text with `maxLines` then keeps the whole lines that fit).
 
 #### textlist
 
