@@ -1019,6 +1019,11 @@ namespace Renderer
 			bool wasRecording = recording;
 			recording = false;
 
+			// The state the recording tracks stays the recording's: a replayed square rectangle binds texture 0
+			// through Renderer's own functions, and the next frame would start from another state than the one
+			// kept with the frame on screen (it would never compare equal)
+			State tracked = state;
+
 			for (; sent < frame.commands.size(); sent++)
 			{
 				const Command& c = frame.commands[sent];
@@ -1041,6 +1046,7 @@ namespace Renderer
 				}
 			}
 
+			state = tracked;
 			recording = wasRecording;
 		}
 
