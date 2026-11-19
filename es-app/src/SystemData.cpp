@@ -2367,6 +2367,9 @@ FileData* SystemData::getSuggestedGame()
 	return findByPath(mSuggestions.current());
 }
 
+// A utility's items the theme can bind: recent1 to recent12
+#define RECENT_ITEMS 12
+
 FileData* SystemData::getRecentItem(size_t index)
 {
 	if (mRootFolder == nullptr || !isUtilitySystem(this))
@@ -2401,7 +2404,7 @@ FileData* SystemData::getRecentItem(size_t index)
 			items.push_back(item);
 		}
 
-		mRecent = HomeSlides::newestFirst(items, 8);
+		mRecent = HomeSlides::newestFirst(items, RECENT_ITEMS);
 		mRecentCount = files.size();
 	}
 
@@ -2609,9 +2612,10 @@ BindableProperty SystemData::getProperty(const std::string& name)
 	if (name == "slides")
 		return Utils::String::join(getSlides(), "\n");
 
-	if (name.size() == 7 && Utils::String::startsWith(name, "recent") && name[6] >= '1' && name[6] <= '8')
+	if (name.size() > 6 && name.size() <= 8 && Utils::String::startsWith(name, "recent") && name.find_first_not_of("0123456789", 6) == std::string::npos)
 	{
-		FileData* item = getRecentItem(name[6] - '1');
+		int number = Utils::String::toInteger(name.substr(6));
+		FileData* item = number >= 1 && number <= RECENT_ITEMS ? getRecentItem(number - 1) : nullptr;
 		return item != nullptr ? BindableProperty((IBindable*)item) : BindableProperty::Null;
 	}
 
