@@ -24,6 +24,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <mutex>
 #include <thread>
 #include <stdio.h>
 #include <string.h>
@@ -155,7 +156,35 @@ bool ApiSystem::isFreeSpaceLimit()
 	return getFreeSpaceGB(Paths::getRootPath()) < 2;
 }
 
+// The version cannot change while ES runs (an update applies at the next start), and asking the script takes
+// a quarter of a second on a handheld, several times per main menu: it is asked once, and early (prefetchVersion)
+static std::mutex sVersionLock;
+static bool sVersionKnown = false;
+static std::string sVersion;
+
+void ApiSystem::prefetchVersion()
+{
+	std::thread([] { ApiSystem::getInstance()->getVersion(); }).detach();
+}
+
 std::string ApiSystem::getVersion(bool extra)
+{
+	if (!extra)
+	{
+		std::unique_lock<std::mutex> lock(sVersionLock);
+		if (!sVersionKnown)
+		{
+			sVersion = readVersion(false);
+			sVersionKnown = true;
+		}
+
+		return sVersion;
+	}
+
+	return readVersion(true);
+}
+
+std::string ApiSystem::readVersion(bool extra)
 {
 	LOG(LogDebug) << "ApiSystem::getVersion";
 

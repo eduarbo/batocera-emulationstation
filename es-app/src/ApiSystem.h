@@ -141,6 +141,8 @@ public:
     bool isFreeSpaceLimit();
 
     virtual std::string getVersion(bool extra = false);
+	// Reads the version on a thread now, so the first menu does not wait for it
+	void prefetchVersion();
 	virtual std::string getApplicationName();
 
     std::string getRootPassword();
@@ -304,6 +306,9 @@ public:
 
 protected:
 	ApiSystem();
+
+	// What getVersion asks the system each time (it keeps the answer)
+	std::string readVersion(bool extra);
 
 	virtual bool executeScript(const std::string command);  
 	virtual std::pair<std::string, int> executeScript(const std::string command, const std::function<void(const std::string)>& func);

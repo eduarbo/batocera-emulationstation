@@ -566,6 +566,9 @@ int main(int argc, char* argv[])
 
 	PowerSaver::init();
 
+	// The version the main menu shows, read while ES loads
+	ApiSystem::getInstance()->prefetchVersion();
+
 	bool splashScreen = Settings::getInstance()->getBool("SplashScreen");
 	bool splashScreenProgress = Settings::getInstance()->getBool("SplashScreenProgress");
 
