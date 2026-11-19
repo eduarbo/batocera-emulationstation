@@ -1084,6 +1084,8 @@ namespace Renderer
 			return changed;
 		}
 
+		static bool drawingAgain = false;
+
 		static void verifyKept(const std::function<void()>& drawAgain)
 		{
 			int w = getWindowWidth(), h = getWindowHeight();
@@ -1092,7 +1094,9 @@ namespace Renderer
 				return;
 
 			Instance()->clear();
+			drawingAgain = true;
 			drawAgain();
+			drawingAgain = false;
 
 			pixels.resize(keptPixels.size());
 			if (!Instance()->readPixels(0, 0, w, h, pixels.data()))
@@ -1196,6 +1200,11 @@ namespace Renderer
 	void invalidateFrame()
 	{
 		FrameCache::shownValid = false;
+	}
+
+	bool isDrawingAgain()
+	{
+		return FrameCache::drawingAgain;
 	}
 
 	//////////////////////////////////////////////////////////////////////////

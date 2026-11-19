@@ -213,6 +213,9 @@ namespace Renderer
 	bool         endFrame          (const std::function<void()>& drawAgain = nullptr);
 	// The next frame is drawn whatever it holds (the screen may have lost the one it showed)
 	void         invalidateFrame   ();
+	// RenderOnChangeVerify's second drawing of a frame: what a render does besides drawing (a video's start
+	// and loop, the screen saver's start) is left to the first
+	bool         isDrawingAgain    ();
 
 	void		 blurBehind		   (const float _x, const float _y, const float _w, const float _h, const float blurSize = 4.0f);
 	void		 postProcessShader (const std::string& path, const float _x, const float _y, const float _w, const float _h, const std::map<std::string, std::string>& parameters, unsigned int* data = nullptr);

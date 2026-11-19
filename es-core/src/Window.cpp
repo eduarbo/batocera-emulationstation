@@ -785,7 +785,7 @@ void Window::render()
 	Renderer::setMatrix(transform);
 
 	unsigned int screensaverTime = (unsigned int)Settings::ScreenSaverTime();
-	if (mTimeSinceLastInput >= screensaverTime && screensaverTime != 0)
+	if (mTimeSinceLastInput >= screensaverTime && screensaverTime != 0 && !Renderer::isDrawingAgain())
 		startScreenSaver();
 
 	// Render notifications

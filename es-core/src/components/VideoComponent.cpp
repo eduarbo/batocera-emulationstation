@@ -206,6 +206,10 @@ void VideoComponent::render(const Transform4x4f& parentTrans)
 		Renderer::drawRect(0.0f, 0.0f, mSize.x(), mSize.y(), 0x00000033);
 	}
 
+	// The frame drawn a second time for RenderOnChangeVerify does not start or loop the video again
+	if (Renderer::isDrawingAgain())
+		return;
+
 	// Handle the case where the video is delayed
 	if (!GuiComponent::isLaunchTransitionRunning)
 		handleStartDelay();
