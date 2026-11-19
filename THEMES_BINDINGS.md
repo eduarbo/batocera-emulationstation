@@ -160,6 +160,7 @@ screenHeight                int
 screenRatio                 string
 vertical                    bool
 lastPlayed                  game                  The game played last on the console, tools, emulators and screenshots left out ({global:lastPlayed:system:fullName})
+homeColumn                  int                   The level the home's columns show (1 the first column, 2 the grid), 0 without columns (THEMES.md, Columns)
 ```	
 
 **systemrandom:**
