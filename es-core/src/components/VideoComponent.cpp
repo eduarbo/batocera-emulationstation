@@ -255,7 +255,7 @@ void VideoComponent::renderSnapshot(const Transform4x4f& parentTrans)
 {
 	// Out of view (a view still drawn while it slides away, or before it is shown), the stopped video leaves its
 	// snapshot in its place instead of a hole
-	if (!isShowing() && !mIsPlaying && !mIsWaitingForVideoToStart && !isPaused() && (mConfig.showSnapshotNoVideo || mConfig.showSnapshotDelay))
+	if ((!isShowing() || !mInView) && !mIsPlaying && !mIsWaitingForVideoToStart && !isPaused() && (mConfig.showSnapshotNoVideo || mConfig.showSnapshotDelay))
 	{
 		if (!mStaticImage.isStoryBoardRunning("snapshot"))
 		{
@@ -544,7 +544,7 @@ void VideoComponent::manageState()
 
 	// We will only show if the component is on display and the screensaver
 	// is not active
-	bool show = isShowing() && !mScreensaverActive && mIsTopWindow && mVisible && mEnabled;
+	bool show = isShowing() && mInView && !mScreensaverActive && mIsTopWindow && mVisible && mEnabled;
 	if (!show)
 		mStartDelayed = false;
 
