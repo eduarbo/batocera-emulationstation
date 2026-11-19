@@ -231,6 +231,8 @@ protected:
 	bool							mTargetIsMin;
 	bool							mKeepOrientation;
 	bool							mInView = true;
+	// how long the video takes to come in over its snapshot (the theme's fadeTime)
+	int								mFadeTimeMs = 400;
 
 	bool							mIsWaitingForVideoToStart;
 
