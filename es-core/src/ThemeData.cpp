@@ -203,6 +203,7 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 
 		{ "autoLayout", NORMALIZED_PAIR },
 		{ "autoLayoutSelectedZoom", FLOAT },
+		{ "peekSize", FLOAT },
 		{ "animateSelection", BOOLEAN },
 		{ "imageSource", STRING },				// image, thumbnail, marquee
 		{ "zIndex", FLOAT },
