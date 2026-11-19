@@ -479,6 +479,10 @@ void VideoVlcComponent::onPaddingChanged()
 void VideoVlcComponent::setColorShift(unsigned int color)
 {
 	mColorShift = color;
+
+	// A bound colour too: the picture the video replaces looks as the video
+	if (mThemeSnapshot)
+		mStaticImage.setColorShift(color);
 }
 
 void VideoVlcComponent::updateVertices()
@@ -1458,4 +1462,7 @@ bool VideoVlcComponent::isPaused()
 void VideoVlcComponent::setSaturation(float saturation)
 {
 	mSaturation = saturation;
+
+	if (mThemeSnapshot)
+		mStaticImage.setSaturation(saturation);
 }

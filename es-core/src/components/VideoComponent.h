@@ -219,6 +219,7 @@ protected:
 	bool							mScreensaverMode;
 	bool							mIdlePause;		// a theme's video: stops for the idle pause (Window::isIdlePaused)
 	bool							mIdleStopped;	// stopped by it at the end of a loop, until input
+	bool							mThemeSnapshot;	// the theme gives the snapshot ("snapshot"): it takes the video's colour and saturation
 	bool							mTargetIsMax;
 	bool							mTargetIsMin;
 

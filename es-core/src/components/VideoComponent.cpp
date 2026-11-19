@@ -68,6 +68,7 @@ VideoComponent::VideoComponent(Window* window) :
 	mEnabled(true),
 	mScreensaverMode(false),
 	mIdlePause(false),
+	mThemeSnapshot(false),
 	mIdleStopped(false),
 	mTargetIsMax(false),
 	mTargetIsMin(false),
@@ -381,7 +382,8 @@ void VideoComponent::applyTheme(const std::shared_ptr<ThemeData>& theme, const s
 
 	// The theme's snapshot (a capture, usually bound to the game): shown until the video plays, and in its
 	// place when there is none, with the video's colour and saturation; once the video plays it replaces it
-	if (elem->has("snapshot"))
+	mThemeSnapshot = elem->has("snapshot");
+	if (mThemeSnapshot)
 	{
 		if (!elem->has("snapshot_binding"))
 			setImage(elem->get<std::string>("snapshot"));
