@@ -13,6 +13,7 @@
 #include "utils/StringUtil.h"
 
 #include <SDL.h>
+#include <deque>
 #include <set>
 #include <stack>
 
@@ -854,9 +855,10 @@ namespace Renderer
 
 		struct Frame
 		{
-			State                start;
-			std::vector<Command> commands;
-			std::vector<Vertex>  vertices;
+			State                  start;
+			std::vector<Command>   commands;
+			std::vector<Vertex>    vertices;
+			std::deque<ShaderInfo> shaders;		// the custom shaders of its vertices, as they were when kept
 		};
 
 		static bool                   recording = false;
@@ -976,15 +978,29 @@ namespace Renderer
 			command.count = count;
 			frame.vertices.insert(frame.vertices.end(), vertices, vertices + count);
 
-			// A custom shader is given the frame's number: the same commands do not draw the same frame
 			for (unsigned int i = 0; i < count; i++)
-				if (vertices[i].customShader != nullptr)
-					mustShow = true;
+			{
+				if (vertices[i].customShader == nullptr)
+					continue;
+
+				// Its parameters are copied: a component may change them for its next draw before this one
+				// is sent (a rectangle draws its fill and its border with one shader)
+				frame.shaders.push_back(*vertices[i].customShader);
+				frame.vertices[command.first + i].customShader = &frame.shaders.back();
+
+				// A custom shader is given the frame's number: the same commands do not draw the same frame
+				mustShow = true;
+			}
 		}
 
-		// Sends the commands not sent yet, in order
+		// Sends the commands not sent yet, in order. Nothing is kept while they run: a renderer may draw
+		// through Renderer's own functions (a square rectangle is drawn with drawRect), and what it draws
+		// would otherwise be added to the end of the frame and drawn after the commands that follow.
 		static void send()
 		{
+			bool wasRecording = recording;
+			recording = false;
+
 			for (; sent < frame.commands.size(); sent++)
 			{
 				const Command& c = frame.commands[sent];
@@ -1006,6 +1022,8 @@ namespace Renderer
 				case Command::READ_BACK:  break;
 				}
 			}
+
+			recording = wasRecording;
 		}
 
 		// Before anything that must run at once: what was kept is sent, and the frame will be shown
@@ -1069,6 +1087,7 @@ namespace Renderer
 
 		frame.commands.clear();
 		frame.vertices.clear();
+		frame.shaders.clear();
 		frame.start = state;
 		sent = 0;
 		mustShow = false;
