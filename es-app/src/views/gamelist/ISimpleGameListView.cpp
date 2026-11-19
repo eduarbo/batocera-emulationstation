@@ -689,7 +689,7 @@ std::vector<HelpPrompt> ISimpleGameListView::getHelpPrompts()
 		prompts.push_back(HelpPrompt(BUTTON_OK, _("GAME OPTIONS (HOLD)"), [&] { showSelectedGameOptions(); }));
 
 	if (!UIModeController::getInstance()->isUIModeKid())
-		prompts.push_back(HelpPrompt("select", _("OPTIONS"), [&] { showGamelistOptions(); }));
+		prompts.push_back(HelpPrompt("select", _("VIEW OPTIONS"), [&] { showGamelistOptions(); }));
 
 	if (cursorHasSaveStatesEnabled())
 	{
