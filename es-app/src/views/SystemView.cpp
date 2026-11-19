@@ -450,6 +450,10 @@ void SystemView::goToSystem(SystemData* system, bool animate)
 	if (mLastCursor == -1)
 		onCursorChanged(CURSOR_STOPPED);
 
+	// The selected system's extras show: those of a tab shown before come back hidden, and a cursor already in
+	// place (the same index on both tabs) does not activate them
+	activateExtras(mCarousel.getCursorIndex());
+
 	if (!animate)
 	{
 		finishAnimation(0);
