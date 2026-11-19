@@ -15,6 +15,7 @@
 #include "LocaleES.h"
 #include "AudioManager.h"
 #include <SDL_events.h>
+#include <SDL_timer.h>
 #include "ThemeData.h"
 #include <mutex>
 #include <time.h>
@@ -931,6 +932,105 @@ void Window::render()
 
 		Renderer::setScreenMargin(margin.x(), margin.y());
 	}
+}
+
+namespace
+{
+	struct FrameStats
+	{
+		std::mutex lock;
+		unsigned long loops = 0, drawn = 0, over33 = 0, over50 = 0, inputs = 0;
+		unsigned long long workMs = 0;
+		int maxWorkMs = 0, maxInputMs = 0;
+		unsigned int pendingInput = 0;	// SDL ticks of the first input not drawn yet; 0 none
+		std::vector<int> latencies;		// the last ones, ms
+		std::string trail, trails;		// the turns from an input to its drawn frame: "work ms" or "work ms*" when drawn
+	};
+
+	FrameStats& frameStats()
+	{
+		static FrameStats* stats = new FrameStats();
+		return *stats;
+	}
+}
+
+void Window::recordInput(unsigned int eventTicks)
+{
+	FrameStats& s = frameStats();
+	std::unique_lock<std::mutex> lock(s.lock);
+	if (s.pendingInput == 0)
+		s.pendingInput = eventTicks == 0 ? 1 : eventTicks;
+}
+
+void Window::recordFrame(int workMs, bool drawn, const std::vector<int>& parts)
+{
+	FrameStats& s = frameStats();
+	std::unique_lock<std::mutex> lock(s.lock);
+
+	s.loops++;
+	s.workMs += workMs;
+	s.maxWorkMs = Math::max(s.maxWorkMs, workMs);
+	if (workMs > 33) s.over33++;
+	if (workMs > 50) s.over50++;
+
+	// input, update, render, drawing and showing (ms)
+	if (s.pendingInput != 0 && s.trail.size() < 300)
+	{
+		s.trail += std::to_string(workMs) + (drawn ? "*" : "");
+		if (parts.size() == 4)
+			s.trail += "(" + std::to_string(parts[0]) + "/" + std::to_string(parts[1]) + "/" + std::to_string(parts[2]) + "/" + std::to_string(parts[3]) + ")";
+		s.trail += " ";
+	}
+
+	if (!drawn)
+	{
+		// An input with nothing to show for half a second (a key that does nothing) is not counted
+		if (s.pendingInput != 0 && SDL_GetTicks() - s.pendingInput > 500)
+		{
+			s.pendingInput = 0;
+			s.trail.clear();
+		}
+
+		return;
+	}
+
+	s.drawn++;
+	if (s.pendingInput != 0)
+	{
+		int latency = (int)(SDL_GetTicks() - s.pendingInput);
+		s.inputs++;
+		s.maxInputMs = Math::max(s.maxInputMs, latency);
+		s.pendingInput = 0;
+
+		s.latencies.push_back(latency);
+		if (s.latencies.size() > 64)
+			s.latencies.erase(s.latencies.begin());
+
+		if (s.trails.size() < 4000)
+			s.trails += (s.trails.empty() ? "" : "| ") + std::to_string(latency) + "ms: " + s.trail;
+		s.trail.clear();
+	}
+}
+
+std::string Window::takeFrameStats()
+{
+	FrameStats& s = frameStats();
+	std::unique_lock<std::mutex> lock(s.lock);
+
+	std::string json = "{ \"loops\": " + std::to_string(s.loops) + ", \"drawn\": " + std::to_string(s.drawn) +
+		", \"avgWorkMs\": " + std::to_string(s.loops ? (int)(s.workMs / s.loops) : 0) + ", \"maxWorkMs\": " + std::to_string(s.maxWorkMs) +
+		", \"over33\": " + std::to_string(s.over33) + ", \"over50\": " + std::to_string(s.over50) +
+		", \"inputs\": " + std::to_string(s.inputs) + ", \"maxInputMs\": " + std::to_string(s.maxInputMs) + ", \"inputMs\": [";
+	for (size_t i = 0; i < s.latencies.size(); i++)
+		json += (i ? ", " : "") + std::to_string(s.latencies[i]);
+	json += "], \"trails\": \"" + s.trails + "\" }";
+
+	s.latencies.clear();
+	s.trails.clear();
+	s.loops = s.drawn = s.over33 = s.over50 = s.inputs = 0;
+	s.workMs = 0;
+	s.maxWorkMs = s.maxInputMs = 0;
+	return json;
 }
 
 void Window::checkSystemResume()

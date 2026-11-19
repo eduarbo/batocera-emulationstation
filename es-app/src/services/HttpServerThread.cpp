@@ -283,6 +283,15 @@ void HttpServerThread::run()
 			res.set_content(ret, "application/json");
 	});
 
+	// The main loop's frame timing since the last call (Window::takeFrameStats)
+	mHttpServer->Get("/frametimes", [](const httplib::Request& req, httplib::Response& res)
+	{
+		if (!isAllowed(req, res))
+			return;
+
+		res.set_content(Window::takeFrameStats(), "application/json");
+	});
+
 	mHttpServer->Get("/isIdle", [](const httplib::Request& req, httplib::Response& res)
 	{
 		if (!isAllowed(req, res))

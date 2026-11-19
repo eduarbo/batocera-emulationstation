@@ -98,6 +98,13 @@ public:
 	bool cancelScreenSaver();
 	void renderScreenSaver();
 
+	// Frame timing for the API (GET /frametimes): each turn of the main loop's work (what it took, the wait for
+	// events and for the next frame left out), whether it drew, and how long input waited for a drawn frame.
+	// takeFrameStats gives them as JSON since the last call.
+	static void recordFrame(int workMs, bool drawn, const std::vector<int>& parts = std::vector<int>());
+	static void recordInput(unsigned int eventTicks);
+	static std::string takeFrameStats();
+
 	// Back from a system suspend (the time asleep counts in CLOCK_BOOTTIME, not in CLOCK_MONOTONIC or SDL's
 	// ticks): the screen saver stops and the idle times start over, as on a key, so the view shows at once
 	// (the key that woke the system never reaches ES). Called on every turn of the main loop.

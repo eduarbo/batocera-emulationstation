@@ -695,14 +695,22 @@ int main(int argc, char* argv[])
 		SDL_Event event;
 
 		bool ps_standby = PowerSaver::getState() && (int) SDL_GetTicks() - ps_time > PowerSaver::getMode();
+		int eventMs = 0;
 		if(ps_standby ? SDL_WaitEventTimeout(&event, PowerSaver::getTimeout()) : SDL_PollEvent(&event))
 		{
+			int eventsStart = SDL_GetTicks();
+
 			// PowerSaver can push events to exit SDL_WaitEventTimeout immediatly
 			// Reset this event's state
 			TRYCATCH("resetRefreshEvent", PowerSaver::resetRefreshEvent());
 
 			do
 			{
+				// A press (not a release): how long until a frame shows it
+				if (event.type == SDL_KEYDOWN || event.type == SDL_JOYBUTTONDOWN || event.type == SDL_CONTROLLERBUTTONDOWN ||
+					(event.type == SDL_JOYHATMOTION && event.jhat.value != SDL_HAT_CENTERED))
+					Window::recordInput(event.common.timestamp);
+
 				TRYCATCH("InputManager::parseEvent", InputManager::getInstance()->parseEvent(event, &window));
 
 				if (event.type == SDL_QUIT)
@@ -720,6 +728,7 @@ int main(int argc, char* argv[])
 
 			// reset counter
 			ps_time = SDL_GetTicks();
+			eventMs = ps_time - eventsStart;	// what the input took (a view's move, a menu's opening)
 		}
 		else if (ps_standby == false)
 		{
@@ -732,6 +741,8 @@ int main(int argc, char* argv[])
 		}
 
 		window.checkSystemResume();
+
+		int workStart = SDL_GetTicks();
 
 		if (window.isSleeping())
 		{
@@ -748,6 +759,7 @@ int main(int argc, char* argv[])
 		if(deltaTime < 0)
 			deltaTime = 1000;
 
+		int updateStart = SDL_GetTicks();
 		TRYCATCH("Window.update" ,window.update(deltaTime))	
 
 		// The home and the game lists draw a frame only when it changes
@@ -755,7 +767,9 @@ int main(int argc, char* argv[])
 		if (onlyChanges)
 			Renderer::beginFrame();
 
+		int renderStart = SDL_GetTicks();
 		TRYCATCH("Window.render", window.render())
+		int showStart = SDL_GetTicks();
 
 /*
 #ifdef WIN32		
@@ -769,9 +783,16 @@ int main(int argc, char* argv[])
 #endif
 */
 
+		bool drawn = true;
 		if (!onlyChanges)
 			Renderer::swapBuffers();
-		else if (!Renderer::endFrame())
+		else
+			drawn = Renderer::endFrame();
+
+		int end = SDL_GetTicks();
+		Window::recordFrame(eventMs + end - workStart, drawn, { eventMs, renderStart - updateStart, showStart - renderStart, end - showStart });
+
+		if (!drawn)
 		{
 			// The screen keeps its frame: wait as long as showing one would have, or until an event (input is
 			// answered at once)
