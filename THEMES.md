@@ -1598,7 +1598,8 @@ BATOCERA 5.24 - Add images to menuitems
 
 * `*` - type: PATH. 
   - Element name must be the image name in the list : iconSystem, iconUpdates, iconControllers, iconGames, iconUI, iconSound, iconNetwork, iconScraper, iconAdvanced, iconQuit, iconRetroachievements, iconKodi, iconRestart, iconShutdown, iconFastShutdown,
-    iconNewGame and iconAutoSave (the save states' tiles that start a new game and a new autosave)
+    iconNewGame and iconAutoSave (the save states' tiles that start a new game and a new autosave), iconScreensaver
+    (quick access's screensaver; default: iconScraper), iconManual, iconPlanemode, iconSound
 
 #### controllerActivity
 

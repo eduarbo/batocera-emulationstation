@@ -4217,7 +4217,7 @@ void GuiMenu::openQuitMenu_static(Window *window, bool quickAccessMenu, bool ani
 					});
 				delete s;
 
-			}, "iconScraper", true);
+			}, ThemeData::getMenuTheme()->getMenuIcon("iconScreensaver").empty() ? "iconScraper" : "iconScreensaver", true);
 
 		if (ApiSystem::getInstance()->isScriptingSupported(ApiSystem::ScriptId::PDFEXTRACTION) && Utils::FileSystem::exists(Paths::getUserManualPath()))
 		{
