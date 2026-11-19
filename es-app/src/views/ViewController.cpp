@@ -680,10 +680,14 @@ std::shared_ptr<IGameListView> ViewController::getGameListView(SystemData* syste
 
 		if (!loadIfnull)
 			return nullptr;
+	}
 
-		// The view's elements and its games' media check the same files again and again: once each
-		Utils::FileSystem::FileSystemCacheActivator fsc;
+	// The view's elements and its games' media check the same files again and again: once each, while the
+	// view is made
+	Utils::FileSystem::FileSystemCacheActivator fsc;
 
+	if (createAsPopupAndSetExitFunction == nullptr)
+	{
 		system->setUIModeFilters();
 		system->updateDisplayedGameCount();
 	}
