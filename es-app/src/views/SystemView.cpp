@@ -229,14 +229,25 @@ void SystemView::loadExtras(SystemData* system)
 	SystemRandomPlaylist::resetCache();
 }
 
-static const unsigned int PREPARE_AFTER_IDLE_MS = 1500;
-
-// Tabs: once the home is idle (no input for a while), the extras of the other tabs' systems are made ahead,
-// one system per frame, and kept for their tab (mParkedExtras): a tab then shows without making them
+// Tabs: while the idle pause holds the home (its videos ended their loop, its slides stopped), the extras of
+// the other tabs' systems are made ahead, one system per frame, and kept for their tab (mParkedExtras): a tab
+// then shows without making them. They are made on the UI thread, a tenth of a second or more each on a
+// handheld: with a video playing it would stutter.
 void SystemView::prepareOtherTabs()
 {
-	if (!hasTabs() || mViewNeedsReload || mWindow->getTimeSinceLastInput() < PREPARE_AFTER_IDLE_MS || mWindow->peekGui() != ViewController::get())
+	if (!hasTabs() || mViewNeedsReload || mWindow->peekGui() != ViewController::get() ||
+		!mWindow->isIdlePaused(Window::IDLE_VIDEO) || !mWindow->isIdlePaused(Window::IDLE_SLIDES))
 		return;
+
+	for (auto& entry : mEntries)
+	{
+		bool playing = false;
+		for (auto extra : entry.backgroundExtras)
+			forEachVideo(extra, [&playing](VideoComponent* video) { if (video->isPlaying()) playing = true; });
+
+		if (playing)
+			return;
+	}
 
 	for (auto& tab : mTabs)
 	{
