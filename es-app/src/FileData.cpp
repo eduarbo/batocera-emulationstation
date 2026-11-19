@@ -60,6 +60,7 @@ static std::map<std::string, std::function<BindableProperty(FileData*)>> propert
 	{ "hasKeyboardMapping", [](FileData* file) { return file->hasKeyboardMapping(); } },	
 	{ "systemName",			[](FileData* file) { return file->getSourceFileData()->getSystem()->getFullName(); } },
 	{ "imageRatio",			[](FileData* file) { return FileData::getImageRatio(file->getImagePath()); } },
+	{ "thumbnailRatio",		[](FileData* file) { return FileData::getImageRatio(file->getThumbnailPath(false)); } },
 };
 
 // An image's width over its height (0 without one), read from its header once per file and size

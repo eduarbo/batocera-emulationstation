@@ -142,6 +142,7 @@ nameExtra                   string                name, after any parenthesis
 cleanName                   string                name without the trailing tags of dump sets: (USA), (En,Fr), (Rev 1), (v1.1), (Beta), [!]...; " : " as ": "; a screenshot named game-YYMMDD-HHMMSS: its game ("batsugun-241022-000406": "Batsugun")
 shotDate                    string                a screenshot named game-YYMMDD-HHMMSS: when it was taken ("22/10/2024 · 00:04"); empty for any other
 imageRatio                  float                 the image's width over its height (4:3 is 1.33, a DS's two screens 0.67); 0 without an image
+thumbnailRatio              float                 the same for the thumbnail (the box art): 0.71 for most boxes, about 1 for a CD case; 0 without one
 ```
 
 **global:**
