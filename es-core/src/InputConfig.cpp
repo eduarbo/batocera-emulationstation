@@ -224,6 +224,29 @@ bool InputConfig::isMappedTo(const std::string& name, Input input, bool reversed
 	return false;
 }
 
+bool InputConfig::updateHotkey(Input input)
+{
+	if (input.type != TYPE_BUTTON && input.type != TYPE_KEY)
+		return false;
+	if (isMappedTo("hotkey", input))
+	{
+		mHotkeyHeld = input.value != 0;
+		if (!mHotkeyHeld)
+			mChordSpent = false;
+		return false;
+	}
+	if (!isMappedTo("a", input))
+		return false;
+	if (!input.value)
+	{
+		bool consumed = mSuppressConfirmUp;
+		mSuppressConfirmUp = false;
+		return consumed;
+	}
+	mSuppressConfirmUp = mHotkeyHeld && mChordSpent;
+	return mSuppressConfirmUp;
+}
+
 bool InputConfig::isMappedLike(const std::string& name, Input input)
 {
 	if (name == "left")

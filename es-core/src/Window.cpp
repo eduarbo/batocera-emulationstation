@@ -236,6 +236,8 @@ bool Window::deinit(bool deinitRenderer, bool forGame)
 
 	if (deinitRenderer)
 		InputManager::getInstance()->deinit();
+	else if (forGame)
+		InputManager::getInstance()->releaseHotkeys();
 
 	TextureResource::clearQueue();
 	ResourceManager::getInstance()->unloadAll();
@@ -253,7 +255,7 @@ void Window::textInput(const char* text)
 
 void Window::input(InputConfig* config, Input input)
 {
-	if (config == nullptr)
+	if (config == nullptr || config->updateHotkey(input))
 		return;
 	
 	if (config->getDeviceIndex() >= 0 && Settings::getInstance()->getBool("FirstJoystickOnly"))

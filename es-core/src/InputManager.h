@@ -68,6 +68,7 @@ public:
 
 	GunManager* getGunManager() { return mGunManager; }
 
+	void releaseHotkeys();
 	void sendMouseClick(Window* window, int button);
 	InputConfig* getInputConfigByDevice(int deviceId);
 

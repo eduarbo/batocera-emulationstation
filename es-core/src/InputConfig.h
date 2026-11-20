@@ -145,6 +145,12 @@ public:
 
 	bool isConfigured();
 
+	// Modifier state follows this device's event stream, including releases delivered over a modal.
+	bool updateHotkey(Input input);
+	bool hotkeyHeld() const { return mHotkeyHeld; }
+	void releaseHotkey() { mHotkeyHeld = mChordSpent = false; }
+	void consumeHotkeyConfirm() { mChordSpent = mSuppressConfirmUp = true; }
+
 	static std::string buttonLabel(const std::string& button);
 	static std::string buttonDisplayName(const std::string& button);	
 	static std::string buttonImage(const std::string& button);
@@ -152,6 +158,9 @@ public:
 	void updateBatteryLevel(int level) { mBatteryLevel = level; }; 
 
 private:
+	bool mHotkeyHeld = false;
+	bool mChordSpent = false;
+	bool mSuppressConfirmUp = false;
 	std::map<std::string, Input> mNameMap;
 	const int mDeviceId;
 	const int mDeviceIndex; 

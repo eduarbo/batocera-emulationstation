@@ -455,6 +455,15 @@ typedef struct SDL_JoyBatteryEventX
 } SDL_JoyBatteryEventX;
 #endif
 
+// Releases can occur while an emulator owns input. Require a fresh modifier press on return.
+void InputManager::releaseHotkeys()
+{
+	for (const auto& item : mInputConfigs)
+		item.second->releaseHotkey();
+	if (mKeyboardInputConfig)
+		mKeyboardInputConfig->releaseHotkey();
+}
+
 bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 {
 	bool causedEvent = false;

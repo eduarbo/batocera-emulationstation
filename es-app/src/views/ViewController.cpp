@@ -1059,6 +1059,24 @@ bool ViewController::input(InputConfig* config, Input input)
 	    Settings::getInstance()->saveFile();
 	  }
 
+	// Claim A before the browser opens the focused card. Modal dialogs and games own their own input.
+	if (input.value && config->hotkeyHeld() && config->isMappedTo("a", input) && !config->isMappedTo("hotkey", input)
+		&& (mState.viewing == SYSTEM_SELECT || mState.viewing == GAME_LIST) && mState.system)
+	{
+		auto theme = mState.system->getTheme();
+		auto marker = theme ? theme->getVariable("esResumeChordMarker") : std::string();
+		if (!marker.empty() && Utils::FileSystem::isRegularFile(marker) && SystemConf::getInstance()->get("system.quickresume") != "0")
+		{
+			config->consumeHotkeyConfirm();
+			auto game = SystemData::getConsoleLastPlayedGame();
+			if (game)
+				launch(game);
+			else
+				mWindow->displayNotificationMessage(_("NO RECENT GAMES"));
+			return true;
+		}
+	}
+
 	// open menu
 	if(config->isMappedTo("start", input) && input.value != 0)
 	{
