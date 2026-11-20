@@ -1745,7 +1745,7 @@ SystemData* SystemView::adjacentConsole(SystemData* system, int direction)
 {
 	if (consoleOrder.empty()) return nullptr;
 	auto it = std::find(consoleOrder.begin(), consoleOrder.end(), system);
-	if (it == consoleOrder.end()) return direction < 0 ? consoleOrder.back() : consoleOrder.front();
+	if (it == consoleOrder.end()) return nullptr;
 	const int count = static_cast<int>(consoleOrder.size());
 	return consoleOrder[(static_cast<int>(it - consoleOrder.begin()) + direction + count) % count];
 }
