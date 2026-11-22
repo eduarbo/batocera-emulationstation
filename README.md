@@ -1,10 +1,10 @@
 # EmulationStation para Canica · RG35XX H
 
-Este fork adapta el menú de KNULLI a una pantalla de 640 × 480 y a la cruceta de la Anbernic. Canica necesita cambios en el motor para paginar por filas visibles, rotar vídeos, abrir partidas con **X** y completar palabras con los gatillos. Las variantes **Iris** y **Ámbar** comparten esos controles. **[Instalar Canica en una Anbernic RG35XX H](https://github.com/eduarbo/knulli-linux/blob/scarab-20260511-fixes/docs/canica-rg35xx-h.md).**
+Este fork adapta el menú de KNULLI a una pantalla de 640 × 480 y a la cruceta de la Anbernic. Canica necesita cambios en el motor para paginar por filas visibles, rotar vídeos, abrir partidas con **X** y completar palabras con los gatillos. Las variantes **Iris** y **Ámbar** comparten esos controles. **[Instalar Canica en una Anbernic RG35XX H](https://github.com/eduarbo/knulli-linux/blob/main/docs/canica-rg35xx-h.md).**
 
 | Qué quieres consultar | Dónde está |
 | --- | --- |
-| Código del motor de Canica RC27.1 | [Serie Canica](https://github.com/eduarbo/batocera-emulationstation/tree/canica-scarab-20260511) · [los últimos 15 parches](https://github.com/eduarbo/batocera-emulationstation/pull/1) |
+| Código del motor de Canica RC27.1 | [Motor en `main`](https://github.com/eduarbo/batocera-emulationstation/tree/main) · [los últimos 15 parches](https://github.com/eduarbo/batocera-emulationstation/pull/1) |
 | Integración con el firmware y adaptador de partidas | [Fork de KNULLI](https://github.com/eduarbo/knulli-linux) |
 | Herramientas de compilación, instalación y recuperación | [knulli-console-bundles](https://github.com/eduarbo/knulli-console-bundles) |
 
