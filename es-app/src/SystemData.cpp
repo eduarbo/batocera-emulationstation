@@ -2689,6 +2689,11 @@ BindableProperty SystemData::getProperty(const std::string& name)
 	if (info == nullptr)
 		return BindableProperty::Null;
 
+	if (name == "visibleGameCount")
+		return info->visibleGames;
+	if (name == "libraryGameCount")
+		return info->totalGames;
+
 	if (name == "total")
 	{
 		if (info->totalGames != info->visibleGames)
