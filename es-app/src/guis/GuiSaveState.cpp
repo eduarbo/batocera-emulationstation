@@ -12,6 +12,36 @@
 
 static int slots = 6; // 5;
 
+static std::string saveTimestamp(Utils::Time::DateTime& saved, const std::shared_ptr<ThemeData>& theme,
+                                 const tm& today, const tm& yesterday)
+{
+	if (!theme || theme->getVariable("esSaveToday").empty())
+		return saved.toLocalTimeString();
+
+	if (!saved.isValid())
+		return theme->getVariable("esSaveUnknownDate");
+
+	const tm& day = saved.getTimeStruct();
+	std::string date;
+	if (day.tm_year == today.tm_year && day.tm_yday == today.tm_yday)
+		date = theme->getVariable("esSaveToday");
+	else if (day.tm_year == yesterday.tm_year && day.tm_yday == yesterday.tm_yday)
+		date = theme->getVariable("esSaveYesterday");
+	else
+	{
+		char month[32] = {};
+		strftime(month, sizeof(month), "%b", &day);
+		date = std::to_string(day.tm_mday) + " " + month;
+		if (day.tm_year != today.tm_year)
+			date += " " + std::to_string(day.tm_year + 1900);
+	}
+
+	char clock[6] = {};
+	strftime(clock, sizeof(clock), "%H:%M", &day);
+	return date + " · " + clock;
+}
+
+
 GuiSaveState::GuiSaveState(Window* window, FileData* game, const std::function<void(SaveState* state)>& callback) :
 	GuiComponent(window), mGrid(nullptr), mBackground(window, ":/frame.png"),
 	mLayout(window, Vector2i(3, 5)), mTitle(nullptr)
@@ -54,6 +84,8 @@ GuiSaveState::GuiSaveState(Window* window, FileData* game, const std::function<v
 	if (themedTiles && fontScale > 0.0f && fontScale != 1.0f)
 		sh = (std::ceil(theme->TextSmall.font->getSize() / fontScale) + 0.25f) / (float)Math::min(Renderer::getScreenHeight(), Renderer::getScreenWidth());
 
+	const auto datesTheme = game->getSystem()->getTheme();
+	const bool readableDates = datesTheme && !datesTheme->getVariable("esSaveToday").empty();
 	std::string gridSpacing = themedTiles ? "  <margin>8 0</margin>  <padding>4 6 4 6</padding>" : "  <margin>0.01 0.02</margin>  <padding>0 0</padding>";
 	std::string tileBackground = themedTiles ?
 		"  <backgroundImage>" + tile.path + "</backgroundImage>"
@@ -92,7 +124,7 @@ GuiSaveState::GuiSaveState(Window* window, FileData* game, const std::function<v
 		"  <fontSize>" + std::to_string(sh) + "</fontSize>"
 		"  <alignment>center</alignment>"
 		"  <singleLineScroll>false</singleLineScroll>"
-		"  <size>1 0.30</size>"
+		+ std::string(readableDates ? "  <size>1 0.41</size><lineSpacing>1</lineSpacing>" : "  <size>1 0.30</size>") +
 		"</text>"
 		"<text name=\"gridtile:selected\">"
 		"  <color>" + Utils::String::toHexString(theme->Text.selectedColor) + "</color>"
@@ -137,7 +169,7 @@ void GuiSaveState::loadGrid()
 				return file1->config->isActiveConfig(mGame);
 			
 			if (supportsIncrementalSaveStates && file1->config != nullptr ? file1->config->incremental : incrementalSaveStates)
-				return file1->creationDate >= file2->creationDate;
+				return file1->creationDate > file2->creationDate;
 
 			return file1->slot < file2->slot; 
 		});
@@ -148,17 +180,26 @@ void GuiSaveState::loadGrid()
 	std::string newGameIcon = theme->getMenuIcon("iconNewGame");
 	std::string autoSaveIcon = theme->getMenuIcon("iconAutoSave");
 
-	mGrid->add(_("START NEW GAME"), newGameIcon.empty() ? ":/freeslot.svg" : newGameIcon, SaveStateItem(mRepository->getDefaultNewGameSaveState()));
+	auto datesTheme = mGame->getSystem()->getTheme();
+	const bool singleStart = datesTheme && datesTheme->getVariable("esSingleNewGame") == "true";
+	const bool offerNewAuto = mRepository->supportsAutoSave() && mGame->getCurrentGameSetting("autosave") == "1" &&
+		std::none_of(states.begin(), states.end(), [](const SaveState* state) { return state->slot == -1; });
+	auto start = singleStart && offerNewAuto ? mRepository->getDefaultAutoSaveSaveState() : mRepository->getDefaultNewGameSaveState();
 
-	if (mRepository->supportsAutoSave() && mGame->getCurrentGameSetting("autosave") == "1")
-	{
-		auto autoSave = std::find_if(states.cbegin(), states.cend(), [](SaveState* x) { return x->slot == -1; });
-		if (autoSave == states.cend())
-			mGrid->add(_("START NEW AUTO SAVE"), autoSaveIcon.empty() ? ":/freeslot.svg" : autoSaveIcon, SaveStateItem(mRepository->getDefaultAutoSaveSaveState()));
-	}
+	mGrid->add(_("START NEW GAME"), newGameIcon.empty() ? ":/freeslot.svg" : newGameIcon, SaveStateItem(start));
+	if (!singleStart && offerNewAuto)
+		mGrid->add(_("START NEW AUTO SAVE"), autoSaveIcon.empty() ? ":/freeslot.svg" : autoSaveIcon, SaveStateItem(mRepository->getDefaultAutoSaveSaveState()));
+
+	const tm today = Utils::Time::DateTime::now().getTimeStruct();
+	tm yesterday = today;
+	--yesterday.tm_mday;
+	yesterday.tm_hour = 12;
+	yesterday.tm_isdst = -1;
+	mktime(&yesterday);
 
 	for (auto item : states)
 	{
+		const auto timestamp = saveTimestamp(item->creationDate, datesTheme, today, yesterday);
 		std::string coreinfo;
 		
 		if (item->config != nullptr && !item->config->emulator.empty() && !item->config->isActiveConfig(mGame))
@@ -170,11 +211,11 @@ void GuiSaveState::loadGrid()
 		}
 
 		if (item->slot == -1)
-			mGrid->add(_("AUTO SAVE") + std::string("\r\n") + item->creationDate.toLocalTimeString() + coreinfo, item->getScreenShot(), SaveStateItem(item));
+			mGrid->add(_("AUTO SAVE") + std::string("\r\n") + timestamp + coreinfo, item->getScreenShot(), SaveStateItem(item));
 		else if (supportsIncrementalSaveStates && item->config != nullptr ? item->config->incremental : incrementalSaveStates)
-			mGrid->add(item->creationDate.toLocalTimeString() + coreinfo, item->getScreenShot(), SaveStateItem(item));
+			mGrid->add(timestamp + coreinfo, item->getScreenShot(), SaveStateItem(item));
 		else 
-			mGrid->add(_("SLOT") + std::string(" ") + std::to_string(item->slot) + std::string("\r\n") + item->creationDate.toLocalTimeString() + coreinfo, item->getScreenShot(), SaveStateItem(item));
+			mGrid->add(_("SLOT") + std::string(" ") + std::to_string(item->slot) + std::string("\r\n") + timestamp + coreinfo, item->getScreenShot(), SaveStateItem(item));
 	}
 }
 
@@ -248,7 +289,7 @@ bool GuiSaveState::input(InputConfig* config, Input input)
 
 	if (input.value != 0 && config->isMappedTo("y", input))
 	{
-		if (mGrid->size())
+		if (mGrid->size() && !mGrid->getSelected().saveState->fileName.empty())
 		{
 			mWindow->pushGui(new GuiMsgBox(mWindow, _("ARE YOU SURE YOU WANT TO DELETE THIS ITEM?"), _("YES"), 
 				[this]
@@ -272,7 +313,7 @@ bool GuiSaveState::input(InputConfig* config, Input input)
 	
 	if (input.value != 0 && config->isMappedTo("x", input))
 	{
-		if (mGrid->size())
+		if (mGrid->size() && !mGrid->getSelected().saveState->fileName.empty())
 		{
 			const SaveStateItem& toCopy = mGrid->getSelected();
 			

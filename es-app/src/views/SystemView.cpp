@@ -24,7 +24,7 @@
 #include "CollectionSystemManager.h"
 #include "resources/TextureDataManager.h"
 #include "guis/GuiTextEditPopup.h"
-#include "guis/GuiTextEditPopupKeyboard.h"
+#include "guis/GuiGamelistOptions.h"
 #include "TextToSpeech.h"
 #include "BindingManager.h"
 #include "guis/GuiRetroAchievements.h"
@@ -355,7 +355,7 @@ std::vector<GuiComponent*> SystemView::makeExtras(SystemData* system, bool prelo
 			auto path = expressions.find("path");
 			if (path != expressions.cend() && path->second.find("{system:continue:video}") != std::string::npos)
 			{
-				video->setOnVideoEnded([this, system]() { return onContinueVideoEnded(system); });
+				video->setOnVideoEnded([this, system, video]() { return onContinueVideoEnded(system, video); });
 				panelVideo = true;
 			}
 		});
@@ -582,10 +582,8 @@ void SystemView::showQuickSearch()
 			ViewController::get()->goToGameList(all, false);
 		};
 
-		if (Settings::getInstance()->getBool("UseOSK"))
-			mWindow->pushGui(new GuiTextEditPopupKeyboard(mWindow, _("QUICK SEARCH"), "", updateVal, false));
-		else
-			mWindow->pushGui(new GuiTextEditPopup(mWindow, _("QUICK SEARCH"), "", updateVal, false));
+		GuiGamelistOptions::openGameSearch(mWindow, all,
+			_("QUICK SEARCH"), "", updateVal);
 	}
 }
 
@@ -776,6 +774,14 @@ bool SystemView::input(InputConfig* config, Input input)
 		{
 			SystemData* system = getSelected();
 			FileData* game = system != nullptr ? system->getContinueGame() : nullptr;
+
+			// If a library change invalidated the visible pick, rebind before accepting X.
+			if (system != nullptr && (system->usesRandomCollectionPreview() || system->rotatesHomePreview()) &&
+				(system != mShownSystem || game == nullptr || game->getPath() != mShownContinue))
+			{
+				updateExtraTextBinding();
+				return true;
+			}
 
 			// The game the panel shows, should the suggestion have changed since it was bound
 			if (game != nullptr && system == mShownSystem && !mShownContinue.empty() && game->getPath() != mShownContinue)
@@ -971,15 +977,38 @@ void SystemView::update(int deltaTime)
 			updateExtraTextBinding();
 	}
 
-	// A suggestion's video ended: the next suggestion and the panel's rebinding in one step, before the video
-	// restarts, so X never launches a game the panel does not show
+	// VLC reports EOF during rendering. Rebind on the next update, while the same card is still visible.
 	if (mSuggestionEnded != nullptr)
 	{
-		SystemData* system = mSuggestionEnded;
+		auto system = mSuggestionEnded;
 		mSuggestionEnded = nullptr;
-
-		if (system == getSelected() && system->nextSuggestion())
-			updateExtraTextBinding();
+		if (system == getSelected() && system == mShownSystem && mEndedPreviewPath == mShownContinue)
+		{
+			if (system->rotatesHomePreview())
+			{
+				if (homePanelActive() && system->hasOtherHomePreview())
+				{
+					system->homePreview(true);
+					updateExtraTextBinding();
+				}
+			}
+			else if (system->nextSuggestion())
+				updateExtraTextBinding();
+		}
+	}
+	// An image-only or unplayable entry has no EOF. Give its still eight visible seconds.
+	if (mHomePreviewPlayback && homePanelActive() && mShownSystem->hasOtherHomePreview())
+	{
+		mStillElapsed += deltaTime;
+		if (mStillElapsed >= 8000)
+		{
+			mStillElapsed = 0;
+			if (mShownVideo.empty() || !Utils::FileSystem::exists(mShownVideo) || VideoComponent::isUnplayable(mShownVideo))
+			{
+				mShownSystem->homePreview(true);
+				updateExtraTextBinding();
+			}
+		}
 	}
 
 	mCarousel.update(deltaTime);
@@ -1009,8 +1038,25 @@ void SystemView::update(int deltaTime)
 // MIN_SUGGESTION_MS: a video that ends at once loops until then rather than start VLC again every few frames.
 static const unsigned int MIN_SUGGESTION_MS = 5000;
 
-bool SystemView::onContinueVideoEnded(SystemData* system)
+bool SystemView::homePanelActive()
 {
+	return mShownSystem && mShownSystem == getSelected() && isShowing() && (!hasColumns() || mColumnLevel == 2) &&
+		!mScreensaverActive && !GuiComponent::isLaunchTransitionRunning && mWindow->peekGui() == ViewController::get() &&
+		!mWindow->isIdlePaused(Window::IDLE_VIDEO);
+}
+
+bool SystemView::onContinueVideoEnded(SystemData* system, VideoComponent* video)
+{
+	if (system && system->rotatesHomePreview())
+	{
+		if (!homePanelActive() || system != mShownSystem || !mHomePreviewPlayback ||
+			video->getVideoPath() != mShownVideo || !system->hasOtherHomePreview())
+			return true;
+		mSuggestionEnded = system;
+		mEndedPreviewPath = mShownContinue;
+		return false;
+	}
+
 	if (system == nullptr || system != getSelected() || system->getLastPlayedGame() != nullptr || !system->hasOtherSuggestion())
 		return true;
 
@@ -1018,6 +1064,7 @@ bool SystemView::onContinueVideoEnded(SystemData* system)
 		return true;
 
 	mSuggestionEnded = system;
+	mEndedPreviewPath = mShownContinue;
 	return false;
 }
 
@@ -1036,17 +1083,24 @@ void SystemView::updateExtraTextBinding()
 	Utils::FileSystem::FileSystemCacheActivator fsc;
 	SystemData::FindPass findPass;
 
+	if (system != mShownSystem && (system->rotatesHomePreview() || system->usesRandomCollectionPreview()))
+		system->enterHomePreview();
+
 	for (auto extra : mEntries[mCursor].backgroundExtras)
 		BindingManager::updateBindings(extra, system);
 
 	// The game the panel now shows, for X, and since when
 	FileData* shown = system->getContinueGame();
 	std::string path = shown != nullptr ? shown->getPath() : "";
+	mHomePreviewPlayback = shown && system->rotatesHomePreview() &&
+		system->getTheme()->getVariable("animateSystems") == "1";
+	mShownVideo = mHomePreviewPlayback ? shown->getVideoPath() : "";
 	if (system != mShownSystem || path != mShownContinue)
 	{
 		mShownSystem = system;
 		mShownContinue = path;
 		mContinueShownAt = SDL_GetTicks();
+		mStillElapsed = 0;
 	}
 }
 
@@ -1387,6 +1441,13 @@ void SystemView::setColumnLevel(int level, bool animate)
 	level = level == 2 ? 2 : 1;
 	float target = columnPanTarget(level);
 
+	if (level != mColumnLevel)
+	{
+		mSuggestionEnded = nullptr;
+		mStillElapsed = 0;
+		if (level == 2 && getSelected() && getSelected()->rotatesHomePreview())
+			mShownSystem = nullptr;
+	}
 	mColumnLevel = level;
 
 	if (!animate || Settings::PowerSaverMode() == "instant")
@@ -2240,6 +2301,8 @@ void SystemView::onShow()
 
 void SystemView::onHide()
 {
+	mSuggestionEnded = nullptr;
+	mStillElapsed = 0;
 	GuiComponent::onHide();
 
 	mCarousel.onHide();

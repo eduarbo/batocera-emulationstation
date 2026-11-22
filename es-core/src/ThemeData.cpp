@@ -251,6 +251,7 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "backgroundColor", COLOR },
 		{ "borderColor", COLOR },
 		{ "trackColor", COLOR },
+		{ "trackBorderColor", COLOR },
 		{ "fillColor", COLOR },
 		{ "cornerSize", FLOAT },
 		{ "iconPath", PATH },
@@ -606,6 +607,7 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "saturation", FLOAT },
 		{ "onclick", STRING },
 		{ "showSnapshotNoVideo", BOOLEAN },
+		{ "exclusiveSnapshot", BOOLEAN },
 		{ "showSnapshotDelay", BOOLEAN } } },
 
 	{ "carousel", {

@@ -669,7 +669,12 @@ std::string FileData::getlaunchCommand(LaunchGameOptions& options, bool includeC
 			std::string launcher = Utils::FileSystem::getEscapedPath(resume);
 			if (!state)
 				return launcher + command.substr(name.size());
-			launcher += " --es-resume-slot=" + std::to_string(state->slot);
+			// A single new-game tile starts fresh even if sync delivers an auto state
+			// after the list opens. RetroArch keeps its configured auto-save-on-exit policy.
+			const auto theme = system->getTheme();
+			const bool freshAuto = state->slot == -1 && state->fileName.empty() && getEmulator() == "libretro" &&
+				theme && theme->getVariable("esSingleNewGame") == "true";
+			launcher += " --es-resume-slot=" + std::to_string(freshAuto ? -2 : state->slot);
 			command = launcher + command.substr(name.size());
 			// The active libretro core can open a slot directly, without staging a
 			// copy or renaming the player's automatic state before sync.
@@ -1056,7 +1061,7 @@ const std::string& CollectionFileData::getName()
 	return mSourceFileData->getName();
 }
 
-const std::vector<FileData*> FolderData::getChildrenListToDisplay() 
+const std::vector<FileData*> FolderData::getChildrenListToDisplay(bool ignoreTextFilter)
 {
 	std::vector<FileData*> ret;
 
@@ -1119,7 +1124,7 @@ const std::vector<FileData*> FolderData::getChildrenListToDisplay()
 
 		if (idx != nullptr)
 		{
-			int score = idx->showFile(*it);
+			int score = idx->showFile(*it, ignoreTextFilter);
 			if (score == 0)
 				continue;
 
@@ -1141,7 +1146,7 @@ const std::vector<FileData*> FolderData::getChildrenListToDisplay()
 			auto fd = pFolder->findUniqueGameForFolder();
 			if (fd != nullptr)
 			{
-				if (idx != nullptr && !idx->showFile(fd))
+				if (idx != nullptr && !idx->showFile(fd, ignoreTextFilter))
 					continue;
 
 				if (!showHiddenFiles && fd->getHidden())
@@ -1165,7 +1170,7 @@ const std::vector<FileData*> FolderData::getChildrenListToDisplay()
 
 	const FileSorts::SortType& sort = FileSorts::getSortTypes().at(currentSortId);
 
-	if (idx != nullptr && idx->hasRelevency())
+	if (!ignoreTextFilter && idx != nullptr && idx->hasRelevency())
 	{
 		auto compf = sort.comparisonFunction;
 

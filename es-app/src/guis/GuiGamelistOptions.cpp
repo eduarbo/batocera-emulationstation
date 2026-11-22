@@ -286,6 +286,43 @@ GuiGamelistOptions::GuiGamelistOptions(Window* window, IGameListView* gamelist, 
 	mMenu.animateTo(Vector2f((Renderer::getScreenWidth() - mMenu.getSize().x()) / 2, (Renderer::getScreenHeight() - mMenu.getSize().y()) / 2));
 }
 
+void GuiGamelistOptions::openGameSearch(Window* window, SystemData* system, const std::string& title,
+	const std::string& value, const std::function<void(const std::string&)>& apply)
+{
+	auto theme = system->getTheme();
+	if (!theme || theme->getVariable("esWordComplete").empty() || !Settings::getInstance()->getBool("UseOSK") ||
+		!theme->getElement("menu", "searchKeys", "menuKeyboard"))
+	{
+		GuiTextEditPopupKeyboard::openSearch(window, theme, system->getFullName(), title, value, apply);
+		return;
+	}
+
+	WordCompletion vocabulary;
+	std::vector<FolderData*> folders = {system->getRootFolder()};
+	std::set<FolderData*> visited;
+	std::set<std::string> paths;
+	while (!folders.empty())
+	{
+		auto folder = folders.back();
+		folders.pop_back();
+		if (!folder || !visited.insert(folder).second)
+			continue;
+		for (auto item : folder->getChildrenListToDisplay(true))
+		{
+			if (item->getType() == FOLDER)
+				folders.push_back(static_cast<FolderData*>(item));
+			else if (item->getType() == GAME && paths.insert(item->getPath()).second)
+				vocabulary.addTitle(item->getSourceFileData()->getName());
+		}
+	}
+
+	auto commit = [apply](const std::string& query) { apply(Utils::String::trim(query)); };
+	auto keyboard = new GuiTextEditPopupKeyboard(window, theme->getVariable("esSearchTitle"), value, commit,
+		false, "OK", theme, system->getFullName());
+	keyboard->enableWords(std::move(vocabulary));
+	window->pushGui(keyboard);
+}
+
 void GuiGamelistOptions::addTextFilterToMenu()
 {
 	auto theme = ThemeData::getMenuTheme();
@@ -348,10 +385,8 @@ void GuiGamelistOptions::addTextFilterToMenu()
 
 	row.makeAcceptInputHandler([this, updateVal]
 	{
-		if (Settings::getInstance()->getBool("UseOSK"))
-			mWindow->pushGui(new GuiTextEditPopupKeyboard(mWindow, _("FILTER GAMES BY TEXT"), mTextFilter->getValue(), updateVal, false));
-		else
-			mWindow->pushGui(new GuiTextEditPopup(mWindow, _("FILTER GAMES BY TEXT"), mTextFilter->getValue(), updateVal, false));
+		GuiGamelistOptions::openGameSearch(mWindow, mSystem,
+			_("FILTER GAMES BY TEXT"), mTextFilter->getValue(), updateVal);
 	});
 
 	mMenu.addRow(row);
