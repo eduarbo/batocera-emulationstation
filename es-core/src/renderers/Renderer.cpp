@@ -163,7 +163,15 @@ namespace Renderer
 		initialCursorState = (SDL_ShowCursor(0) != 0);
 		if (windowWidth == 0)
 		{
-			SDL_GetDesktopDisplayMode(0, &dispMode);
+			// Use preferred mode (index 0) instead of desktop mode for better compatibility
+			// SDL_GetDesktopDisplayMode may return incorrect fallback modes on some systems
+			if (SDL_GetDisplayMode(0, 0, &dispMode) != 0) {
+				// Fallback to desktop mode if preferred mode query fails
+				SDL_GetDesktopDisplayMode(0, &dispMode);
+				LOG(LogInfo) << "SDL display mode (desktop fallback): " << dispMode.w << "x" << dispMode.h << " @ " << dispMode.refresh_rate << "Hz";
+			} else {
+				LOG(LogInfo) << "SDL display mode (preferred): " << dispMode.w << "x" << dispMode.h << " @ " << dispMode.refresh_rate << "Hz";
+			}
 		}
 
 		windowWidth   = Settings::getInstance()->getInt("WindowWidth")   ? Settings::getInstance()->getInt("WindowWidth")   : dispMode.w;
