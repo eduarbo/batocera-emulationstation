@@ -265,6 +265,22 @@ void GridGameListView::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
 {
 	ISimpleGameListView::onThemeChanged(theme);
 
+	const std::string cache = theme->getVariable("esCardScreenshotDirectory");
+	mGrid.setImageResolver(nullptr);
+	if (!cache.empty())
+	{
+		mGrid.setImageResolver([cache, this](FileData* const& game, const std::string& original) {
+			if (!game || game->getType() != GAME || mGrid.getImageSource() != ImageSource::IMAGE)
+				return original;
+			auto source = game->getSourceFileData();
+			auto system = source->getSystem();
+			const std::string relative = Utils::FileSystem::createRelativePath(source->getPath(), system->getStartPath(), false);
+			if (relative.compare(0, 2, "./") != 0)
+				return original;
+			const auto image = cache + "/" + Utils::FileSystem::getFileName(system->getStartPath()) + "/" + relative.substr(2) + ".png";
+			return Utils::FileSystem::exists(image) ? image : original;
+		});
+	}
 	mGrid.applyTheme(theme, getName(), "gamegrid", ThemeFlags::ALL);
 	mDetails.onThemeChanged(theme);
 	const auto page = theme->getElement(getName(), "pageProgress", "text");

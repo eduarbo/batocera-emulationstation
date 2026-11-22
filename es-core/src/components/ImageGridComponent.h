@@ -102,6 +102,8 @@ public:
 	inline void setCursorChangedCallback(const std::function<void(CursorState state)>& func) { mCursorChangedCallback = func; }
 
 	void setThemeName(std::string name) { mName = name; };
+	using ImageResolver = std::function<std::string(const T&, const std::string&)>;
+	void setImageResolver(ImageResolver resolver) { mImageResolver = std::move(resolver); }
 
 	virtual void topWindow(bool isTop);
 	virtual void onShow();
@@ -188,6 +190,7 @@ private:
 
 	inline bool isVertical() { return mScrollDirection == SCROLL_VERTICALLY; };
 
+	ImageResolver mImageResolver;
 	bool mEntriesDirty;
 
 	int mLastCursor;
@@ -1390,7 +1393,7 @@ void ImageGridComponent<T>::loadTile(std::shared_ptr<GridTileComponent> tile, ty
 	if (tile->hasItemTemplate())
 		return;
 
-	std::string imagePath = entry.data.texturePath;
+	std::string imagePath = mImageResolver ? mImageResolver(entry.object, entry.data.texturePath) : entry.data.texturePath;
 	std::string marqueePath = bindable ? bindable->getProperty("marquee").toString() : ""; // entry.data.marqueePath;
 	std::string videoPath = bindable ? bindable->getProperty("video").toString() : ""; // entry.data.marqueePath;
 	

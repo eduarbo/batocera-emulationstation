@@ -204,7 +204,7 @@ void GuiSaveState::loadGrid()
 
 	mGrid->add(_("START NEW GAME"), newGameIcon.empty() ? ":/freeslot.svg" : newGameIcon, SaveStateItem(start), mScreenshotCards ? 4.0f / 3.0f : 0);
 	if (!singleStart && offerNewAuto)
-		mGrid->add(_("START NEW AUTO SAVE"), autoSaveIcon.empty() ? ":/freeslot.svg" : autoSaveIcon, SaveStateItem(mRepository->getDefaultAutoSaveSaveState()));
+		mGrid->add(_("START NEW AUTO SAVE"), autoSaveIcon.empty() ? ":/freeslot.svg" : autoSaveIcon, SaveStateItem(mRepository->getDefaultAutoSaveSaveState()), mScreenshotCards ? 4.0f / 3.0f : 0);
 
 	mTallestAspect = 4.0f / 3.0f;
 	const tm today = Utils::Time::DateTime::now().getTimeStruct();
