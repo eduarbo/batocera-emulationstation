@@ -48,6 +48,8 @@ protected:
 	
 	std::function<void(SaveState* state)>			mRunCallback;
 
+	bool mScreenshotCards = false;
+	float mTallestAspect = 4.0f / 3.0f;
 	FileData* mGame;
 	SaveStateRepository* mRepository;
 };

@@ -53,6 +53,7 @@ struct ImageGridData
 {
 	std::shared_ptr<GridTileComponent> tile;
 	std::string texturePath;
+	float cardAspect = 0;
 };
 
 // Type trait to check if a type derives from IBindable
@@ -86,7 +87,7 @@ public:
 
 	std::string getThemeTypeName() override { return "imagegrid"; }
 
-	void add(const std::string& name, const std::string& imagePath, const T& obj);
+	void add(const std::string& name, const std::string& imagePath, const T& obj, float cardAspect = 0);
 	virtual void clear();
 
 	void setImage(const std::string& imagePath, const T& obj);
@@ -514,12 +515,13 @@ ImageGridComponent<T>::ImageGridComponent(Window* window) : IList<ImageGridData,
 }
 
 template<typename T>
-void ImageGridComponent<T>::add(const std::string& name, const std::string& imagePath, const T& obj)
+void ImageGridComponent<T>::add(const std::string& name, const std::string& imagePath, const T& obj, float cardAspect)
 {
 	typename IList<ImageGridData, T>::Entry entry;
 	entry.name = name;
 	entry.object = obj;
 	entry.data.texturePath = imagePath;
+	entry.data.cardAspect = cardAspect;
 
 	static_cast<IList< ImageGridData, T >*>(this)->add(entry);
 
@@ -1354,6 +1356,16 @@ template<typename T>
 void ImageGridComponent<T>::loadTile(std::shared_ptr<GridTileComponent> tile, typename IList<ImageGridData, T>::Entry& entry)
 {
 	std::string name = entry.name;
+
+	// A screenshot card can be shorter than its cell. Fit the entire card, including
+	// the focus frame and its caption, to the image without changing the scroll stride.
+	if (entry.data.cardAspect > 0)
+	{
+		float width = std::min(mTileSize.x(), mTileSize.y() * entry.data.cardAspect);
+		Vector2f size(Math::round(width), Math::round(width / entry.data.cardAspect));
+		tile->setSize(size);
+		tile->forceSize(size, mAutoLayoutZoom);
+	}
 
 	IBindable* bindable = getBindable(entry);
 	

@@ -1,4 +1,5 @@
 #include "GuiSaveState.h"
+#include "ImageIO.h"
 #include "SystemData.h"
 #include "FileData.h"
 #include "utils/StringUtil.h"
@@ -11,6 +12,12 @@
 #define WINDOW_HEIGHT Renderer::getScreenHeight() * 0.40f
 
 static int slots = 6; // 5;
+
+static int screenshotColumns()
+{
+	const float ratio = static_cast<float>(Renderer::getScreenWidth()) / Renderer::getScreenHeight();
+	return std::max(2, static_cast<int>(std::round(ratio / 0.44f)));
+}
 
 static std::string saveTimestamp(Utils::Time::DateTime& saved, const std::shared_ptr<ThemeData>& theme,
                                  const tm& today, const tm& yesterday)
@@ -140,17 +147,26 @@ GuiSaveState::GuiSaveState(Window* window, FileData* game, const std::function<v
 		"</view>"
 		"</theme>";
 
-	mTheme = std::shared_ptr<ThemeData>(new ThemeData());
-	std::map<std::string, std::string> emptyMap;
-	mTheme->loadFile("imageviewer", emptyMap, xml, false);
-
-	//mGrid->setSize(Renderer::getScreenWidth(), Renderer::getScreenHeight());
-	mGrid->applyTheme(mTheme, "grid", "gamegrid", 0);
+	mScreenshotCards = datesTheme && datesTheme->getElement("menu", "gamegrid", "imagegrid");
+	if (mScreenshotCards)
+	{
+		mTheme = datesTheme;
+		mGrid->setThemeName("menu");
+		mGrid->setGridSizeOverride(Vector2f(screenshotColumns(), 1));
+		mGrid->applyTheme(mTheme, "menu", "gamegrid", 0);
+	}
+	else
+	{
+		mTheme = std::make_shared<ThemeData>();
+		std::map<std::string, std::string> variables;
+		mTheme->loadFile("imageviewer", variables, xml, false);
+		mGrid->applyTheme(mTheme, "grid", "gamegrid", 0);
+	}
 	mGrid->setCursorChangedCallback([&](const CursorState& /*state*/) { updateHelpPrompts(); });
 
 	loadGrid();
-	centerWindow();
 }
+
 
 void GuiSaveState::loadGrid()
 {
@@ -186,10 +202,11 @@ void GuiSaveState::loadGrid()
 		std::none_of(states.begin(), states.end(), [](const SaveState* state) { return state->slot == -1; });
 	auto start = singleStart && offerNewAuto ? mRepository->getDefaultAutoSaveSaveState() : mRepository->getDefaultNewGameSaveState();
 
-	mGrid->add(_("START NEW GAME"), newGameIcon.empty() ? ":/freeslot.svg" : newGameIcon, SaveStateItem(start));
+	mGrid->add(_("START NEW GAME"), newGameIcon.empty() ? ":/freeslot.svg" : newGameIcon, SaveStateItem(start), mScreenshotCards ? 4.0f / 3.0f : 0);
 	if (!singleStart && offerNewAuto)
 		mGrid->add(_("START NEW AUTO SAVE"), autoSaveIcon.empty() ? ":/freeslot.svg" : autoSaveIcon, SaveStateItem(mRepository->getDefaultAutoSaveSaveState()));
 
+	mTallestAspect = 4.0f / 3.0f;
 	const tm today = Utils::Time::DateTime::now().getTimeStruct();
 	tm yesterday = today;
 	--yesterday.tm_mday;
@@ -210,13 +227,23 @@ void GuiSaveState::loadGrid()
 				coreinfo = std::string("\r\n") + item->config->emulator + ": " + item->config->core;
 		}
 
+		const std::string screenshot = item->getScreenShot();
+		unsigned int width = 0, height = 0;
+		float aspect = mScreenshotCards ? 4.0f / 3.0f : 0;
+		if (mScreenshotCards && !screenshot.empty() && ImageIO::loadImageSize(screenshot, &width, &height) && width && height)
+		{
+			aspect = static_cast<float>(width) / height;
+			mTallestAspect = std::min(mTallestAspect, aspect);
+		}
+
 		if (item->slot == -1)
-			mGrid->add(_("AUTO SAVE") + std::string("\r\n") + timestamp + coreinfo, item->getScreenShot(), SaveStateItem(item));
+			mGrid->add(_("AUTO SAVE") + std::string("\r\n") + timestamp + coreinfo, screenshot, SaveStateItem(item), aspect);
 		else if (supportsIncrementalSaveStates && item->config != nullptr ? item->config->incremental : incrementalSaveStates)
-			mGrid->add(timestamp + coreinfo, item->getScreenShot(), SaveStateItem(item));
+			mGrid->add(timestamp + coreinfo, screenshot, SaveStateItem(item), aspect);
 		else 
-			mGrid->add(_("SLOT") + std::string(" ") + std::to_string(item->slot) + std::string("\r\n") + timestamp + coreinfo, item->getScreenShot(), SaveStateItem(item));
+			mGrid->add(_("SLOT") + std::string(" ") + std::to_string(item->slot) + std::string("\r\n") + timestamp + coreinfo, screenshot, SaveStateItem(item), aspect);
 	}
+	centerWindow();
 }
 
 void GuiSaveState::onSizeChanged()
@@ -228,7 +255,8 @@ void GuiSaveState::onSizeChanged()
 	if (Settings::getInstance()->getBool("ShowHelpPrompts"))
 	{
 		HelpStyle help;
-		help.applyTheme(mTheme, "system");
+		if (!mScreenshotCards)
+			help.applyTheme(mTheme, "system");
 
 		const float height = Math::round(help.font->getLetterHeight() * 1.25f);
 
@@ -260,10 +288,22 @@ void GuiSaveState::onSizeChanged()
 
 void GuiSaveState::centerWindow()
 {
-	setSize(Renderer::getScreenWidth(), WINDOW_HEIGHT);
+	const float screenHeight = Renderer::getScreenHeight();
+	float height = WINDOW_HEIGHT;
+	if (mScreenshotCards)
+	{
+		const float screenWidth = Renderer::getScreenWidth();
+		// Three landscape cards on a 4:3 handheld. Taller captures get a taller
+		// sheet; a very narrow capture fits within the screen at its own ratio.
+		const int columns = screenshotColumns();
+		height = std::min(screenHeight * 0.90f, screenWidth / columns / mTallestAspect + screenHeight * 0.24f);
+	}
+	if (getSize().y() == Math::round(height) && getSize().x() == Renderer::getScreenWidth())
+		return;
+	setSize(Renderer::getScreenWidth(), Math::round(height));
 	animateTo(
 		Vector2f((Renderer::getScreenWidth() - getSize().x()) / 2, Renderer::getScreenHeight()),
-		Vector2f((Renderer::getScreenWidth() - getSize().x()) / 2, Renderer::getScreenHeight() - WINDOW_HEIGHT),
+		Vector2f((Renderer::getScreenWidth() - getSize().x()) / 2, Renderer::getScreenHeight() - getSize().y()),
 		AnimateFlags::OPACITY | AnimateFlags::POSITION);
 }
 
