@@ -1435,7 +1435,7 @@ void ImageGridComponent<T>::loadTile(std::shared_ptr<GridTileComponent> tile, ty
 				tile->setImage(imagePath, true);
 		}
 		else
-			tile->setImage(imagePath, false);
+			tile->setImage(imagePath, false, mImageResolver && imagePath != entry.data.texturePath);
 
 		if (mImageSource == MARQUEEORTEXT)
 			tile->setLabel("");

@@ -225,7 +225,7 @@ public:
 	void setLabel(std::string name);
 	void setVideo(const std::string& path, float defaultDelay = -1.0);
 
-	void setImage(const std::string& path, bool isDefaultImage = false);
+	void setImage(const std::string& path, bool isDefaultImage = false, bool fitImage = false);
 	void setMarquee(const std::string& path);
 	
 	void setFavorite(bool favorite);
@@ -307,6 +307,7 @@ private:
 	bool mSelected;	
 
 	bool mIsDefaultImage;
+	bool mFitImage = false;
 
 	Vector3f mAnimPosition;
 

@@ -177,6 +177,10 @@ void GridTileComponent::resize()
 //		imageOffset = Vector2f::Zero();
 	}
 	
+	// Preserve the complete prepared screenshot without moving the video or badge anchors.
+	if (mFitImage && mImage && currentProperties.Image.sizeMode != "maxSize")
+		mImage->setMaxSize(imageSize.x(), imageSize.y());
+
 	// Recompute final image size if necessary
 	if (mImage != nullptr && currentProperties.Image.sizeMode == "maxSize")
 	{
@@ -1024,7 +1028,7 @@ bool GridTileComponent::isSelected() const
 	return mSelected;
 }
 
-void GridTileComponent::setImage(const std::string& path, bool isDefaultImage)
+void GridTileComponent::setImage(const std::string& path, bool isDefaultImage, bool fitImage)
 {
 	if (mImage == nullptr)
 		return;
@@ -1034,15 +1038,16 @@ void GridTileComponent::setImage(const std::string& path, bool isDefaultImage)
 	else
 		mIsDefaultImage = isDefaultImage;
 
-	if (mCurrentPath == path)
+	if (mCurrentPath == path && mFitImage == fitImage)
 		return;
 
+	mFitImage = fitImage;
 	mCurrentPath = path;
 
 	if (mSelectedProperties.Size.x() > mSize.x())
-		mImage->setImage(path, false, MaxSizeInfo(mSelectedProperties.Size, mSelectedProperties.Image.sizeMode != "maxSize"), false);
+		mImage->setImage(path, false, MaxSizeInfo(mSelectedProperties.Size, !mFitImage && mSelectedProperties.Image.sizeMode != "maxSize"), false);
 	else
-		mImage->setImage(path, false, MaxSizeInfo(mSize, mSelectedProperties.Image.sizeMode != "maxSize"), false);
+		mImage->setImage(path, false, MaxSizeInfo(mSize, !mFitImage && mSelectedProperties.Image.sizeMode != "maxSize"), false);
 
 	resize();
 }
