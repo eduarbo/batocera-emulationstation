@@ -777,6 +777,14 @@ bool SystemView::input(InputConfig* config, Input input)
 			SystemData* system = getSelected();
 			FileData* game = system != nullptr ? system->getContinueGame() : nullptr;
 
+			// If a library change invalidated the visible pick, rebind before accepting X.
+			if (system != nullptr && system->usesRandomCollectionPreview() &&
+				(system != mShownSystem || game == nullptr || game->getPath() != mShownContinue))
+			{
+				updateExtraTextBinding();
+				return true;
+			}
+
 			// The game the panel shows, should the suggestion have changed since it was bound
 			if (game != nullptr && system == mShownSystem && !mShownContinue.empty() && game->getPath() != mShownContinue)
 			{
@@ -1035,6 +1043,9 @@ void SystemView::updateExtraTextBinding()
 	// games ({system:continue:...}, {global:lastPlayed:...}): once is enough
 	Utils::FileSystem::FileSystemCacheActivator fsc;
 	SystemData::FindPass findPass;
+
+	if (system != mShownSystem && system->usesRandomCollectionPreview())
+		system->collectionPreview(true);
 
 	for (auto extra : mEntries[mCursor].backgroundExtras)
 		BindingManager::updateBindings(extra, system);
