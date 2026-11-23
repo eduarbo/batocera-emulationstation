@@ -1,18 +1,16 @@
-# EmulationStation para Canica · RG35XX H
+# EmulationStation for Canica on the RG35XX H
 
-Este fork adapta el menú de KNULLI a una pantalla de 640 × 480 y a la cruceta de la Anbernic. Canica necesita cambios en el motor para paginar por filas visibles, rotar vídeos, abrir partidas con **X** y completar palabras con los gatillos. Las variantes **Iris** y **Ámbar** comparten esos controles. **[Instalar Canica en una Anbernic RG35XX H](https://github.com/eduarbo/knulli-linux/blob/main/docs/canica-rg35xx-h.md).**
+This fork powers a 640 × 480 game browser built around the handheld’s D-pad. It pages through visible rows, plays videos inside cards, completes search words with the shoulder buttons and opens save slots with **X**. Iris and Amber use the same controls.
 
-| Qué quieres consultar | Dónde está |
-| --- | --- |
-| Código del motor de Canica RC27.1 | [Motor en `main`](https://github.com/eduarbo/batocera-emulationstation/tree/main) · [los últimos 15 parches](https://github.com/eduarbo/batocera-emulationstation/pull/1) |
-| Integración con el firmware y adaptador de partidas | [Fork de KNULLI](https://github.com/eduarbo/knulli-linux) |
-| Herramientas de compilación, instalación y recuperación | [knulli-console-bundles](https://github.com/eduarbo/knulli-console-bundles) |
+[Canica home and demos](https://github.com/eduarbo/knulli-linux) · [Install RC30 with your own ROMs](https://github.com/eduarbo/knulli-linux/blob/main/docs/canica-rg35xx-h.md) · [Build the frontend](https://github.com/eduarbo/knulli-linux/tree/main/tools/canica)
 
-**Diferencia frente a Scarab.** La imagen oficial del 11 de mayo de 2026 fija EmulationStation en `4041b56`. La serie base `78db1ce` añadió 110 commits. Canica RC27.1 llega a `87a1319` con **125 commits y 117 archivos modificados** respecto al motor fijado. La revisión `8ad22d6`, para compilar por separado, incorpora además los cuatro parches que normalmente aplica el empaquetado de KNULLI. Los recuentos corresponden a esas revisiones fijas. [Comparación con Scarab](https://github.com/eduarbo/batocera-emulationstation/compare/4041b56a714265de81de8165b34fbd10f313a891...87a1319b60c241ddcdc802986a86316fe5569feb) · [rama de compilación](https://github.com/eduarbo/batocera-emulationstation/tree/canica-scarab-build)
+RC30 ships [frontend `4215ca1`](https://github.com/eduarbo/batocera-emulationstation/tree/4215ca1eb833688a7b34f8f0b2c026584b9110b9) with four Scarab packaging patches. The [firmware fork](https://github.com/eduarbo/knulli-linux) supplies the H700 integration and save adapter. The [bundle tools](https://github.com/eduarbo/knulli-console-bundles) supply the ARM64 build and recovery scripts.
 
-En el proyecto oficial están en revisión la corrección del desplazamiento de títulos y la propuesta de integración de controles, vistas previas y búsqueda. [KNULLI #132](https://github.com/knulli-cfw/batocera-emulationstation/pull/132) · [KNULLI #133](https://github.com/knulli-cfw/batocera-emulationstation/pull/133)
+**Fork history.** Scarab pinned the upstream frontend at `4041b56`. The first series reached 110 commits at `78db1ce`. RC27.1 reached `87a1319` with 125 commits and 117 changed files relative to that upstream revision. The standalone build at `8ad22d6` also included the four packaging patches. These counts refer to those fixed revisions. [Historical comparison](https://github.com/eduarbo/batocera-emulationstation/compare/4041b56a714265de81de8165b34fbd10f313a891...87a1319b60c241ddcdc802986a86316fe5569feb) · [15-patch series](https://github.com/eduarbo/batocera-emulationstation/pull/1) · [Build branch](https://github.com/eduarbo/batocera-emulationstation/tree/canica-scarab-build)
 
-## Documentación de EmulationStation
+The upstream submissions cover long-title scrolling and the controls, previews and search integration. [KNULLI #132](https://github.com/knulli-cfw/batocera-emulationstation/pull/132) · [KNULLI #133](https://github.com/knulli-cfw/batocera-emulationstation/pull/133)
+
+## Upstream documentation
 
 EmulationStation
 ================
