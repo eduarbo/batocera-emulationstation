@@ -23,6 +23,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <functional>
+#include <ctime>
 #include <random>
 #include <atomic>
 #include <condition_variable>
@@ -2176,11 +2177,27 @@ FileData* SystemData::getLastPlayedGame(bool orChefPick)
 	return game;
 }
 
-static std::mt19937& homeRandom()
+// One sequence per shelf and day: a shelf suggests the same games, in the same order, every time the menu
+// starts on a given day, whatever was browsed before, and a new order the next day
+static std::mt19937& homeRandom(const std::string& shelf)
 {
-	static std::random_device device;
-	static std::mt19937 engine(device());
-	return engine;
+	struct Sequence { int day; std::mt19937 engine; };
+	static std::map<std::string, Sequence> sequences;
+
+	time_t now = time(nullptr);
+	struct tm local;
+	localtime_r(&now, &local);
+	int day = (local.tm_year + 1900) * 10000 + (local.tm_mon + 1) * 100 + local.tm_mday;
+
+	auto it = sequences.find(shelf);
+	if (it == sequences.end() || it->second.day != day)
+	{
+		std::string text = std::to_string(day) + ":" + shelf;
+		std::seed_seq seed(text.begin(), text.end());
+		sequences[shelf] = Sequence{ day, std::mt19937(seed) };
+		it = sequences.find(shelf);
+	}
+	return it->second.engine;
 }
 
 // The games of the system and of the systems grouped in it, each keyed by its own system and its path
@@ -2322,7 +2339,7 @@ bool SystemData::pollHomeLists()
 		shown = mGameCountInfo->chefPickPath;
 
 	auto before = mSuggestions.current();
-	mSuggestions.reset(job->pool, homeRandom(), shown);
+	mSuggestions.reset(job->pool, homeRandom(getName() + ":suggestions"), shown);
 	if (!mSuggestionsReady || mSuggestions.current() != before)
 		changed = true;
 
@@ -2425,7 +2442,7 @@ bool SystemData::nextSuggestion()
 	if (getSuggestedGame() == nullptr)
 		return false;
 
-	return mSuggestions.next(homeRandom());
+	return mSuggestions.next(homeRandom(getName() + ":suggestions"));
 }
 
 bool SystemData::usesRandomCollectionPreview()
@@ -2513,7 +2530,7 @@ FileData* SystemData::homePreview(bool advance)
 			}
 			if (!isCollection() && mHistoryPreviews.size() < 2)
 			{
-				std::shuffle(candidates.begin(), candidates.end(), homeRandom());
+				std::shuffle(candidates.begin(), candidates.end(), homeRandom(getName() + ":history"));
 				mHistoryPreviews.insert(mHistoryPreviews.end(), candidates.begin(), candidates.end());
 			}
 			auto it = std::find(mHistoryPreviews.begin(), mHistoryPreviews.end(), previous);
@@ -2523,7 +2540,7 @@ FileData* SystemData::homePreview(bool advance)
 		{
 			if (!mCollectionLatestPath.empty() && (candidates.empty() || rotatesHomePreview()))
 				candidates.push_back(mCollectionLatestPath);
-			mCollectionPreviews.reset(candidates, homeRandom());
+			mCollectionPreviews.reset(candidates, homeRandom(getName() + ":previews"));
 		}
 		mCollectionPreviewsDirty = false;
 	}
@@ -2536,7 +2553,7 @@ FileData* SystemData::homePreview(bool advance)
 		return findByPath(mHistoryPreviews[mHistoryPreviewIndex]);
 	}
 	if (advance)
-		mCollectionPreviews.next(homeRandom());
+		mCollectionPreviews.next(homeRandom(getName() + ":previews"));
 	return mCollectionPreviews.empty() ? nullptr : findByPath(mCollectionPreviews.current());
 }
 
