@@ -374,8 +374,34 @@ void Window::processNotificationMessages()
 	layoutNotificationPopups();
 }
 
+void Window::showProgress(const std::string& title, const std::string& detail, int percent)
+{
+	if (mProgressPopup == nullptr)
+	{
+		if (mNotificationPopups.size() == 0)
+			PowerSaver::pause();
+
+		// First, so a theme's cap on the notices shown at once never hides it
+		mProgressPopup = new GuiInfoPopup(this, title, 24 * 3600 * 1000);
+		mNotificationPopups.insert(mNotificationPopups.begin(), mProgressPopup);
+	}
+
+	mProgressPopup->setProgress(title, detail, percent);
+	layoutNotificationPopups();
+}
+
+void Window::hideProgress()
+{
+	if (mProgressPopup != nullptr)
+		mProgressPopup->finish();
+
+	mProgressPopup = nullptr;
+}
+
 void Window::stopNotificationPopups()
 {
+	mProgressPopup = nullptr;
+
 	if (mNotificationPopups.size() == 0)
 		return;
 

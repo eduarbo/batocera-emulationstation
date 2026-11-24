@@ -9,7 +9,8 @@
 
 GuiInfoPopup::GuiInfoPopup(Window* window, std::string message, int duration) :
 	GuiComponent(window), mMessage(message), mDuration(duration), mRunning(true), mFadeOut(0),
-	mGrid(nullptr), mFrame(nullptr), mThemed(false), mBackgroundColor(0), mBorderColor(0), mCornerRadius(0)
+	mGrid(nullptr), mFrame(nullptr), mThemed(false), mBackgroundColor(0), mBorderColor(0), mCornerRadius(0),
+	mSticky(false), mPercent(-1), mRowHeight(0)
 {
 	auto theme = ThemeData::getMenuTheme();
 
@@ -52,6 +53,7 @@ GuiInfoPopup::GuiInfoPopup(Window* window, std::string message, int duration) :
 		addChild(mText.get());
 
 		mSize = Vector2f(textX + textWidth + padding, height);
+		mRowHeight = height;
 		return;
 	}
 
@@ -120,9 +122,63 @@ void GuiInfoPopup::render(const Transform4x4f& /*parentTrans*/)
 		auto withOpacity = [this](unsigned int color) { return (color & 0xFFFFFF00) | ((color & 0xFF) * getOpacity() / 255); };
 		Renderer::drawSolidRectangle(0, 0, mSize.x(), mSize.y(), withOpacity(mBackgroundColor), withOpacity(mBorderColor),
 			(mBorderColor & 0xFF) ? 1.0f : 0.0f, mCornerRadius);
+
+		if (mPercent >= 0 && mText != nullptr)
+		{
+			float x = mText->getPosition().x();
+			float w = mSize.x() - x - Math::round(mRowHeight * 0.4f);
+			float h = Math::max(2.0f, Math::round(mRowHeight * 0.12f));
+			float y = mSize.y() - h - Math::round(mRowHeight * 0.26f);
+			unsigned int ink = mText->getColor();
+
+			Renderer::drawRect(x, y, w, h, withOpacity((ink & 0xFFFFFF00) | 0x38));
+			Renderer::drawRect(x, y, w * Math::min(mPercent, 100) / 100.0f, h, withOpacity(ink));
+		}
 	}
 
 	renderChildren(trans);	
+}
+
+// In a theme's style the box takes the style's full width, so it does not change size with its text: the title
+// beside the icon, the detail under it and a gauge along the bottom
+void GuiInfoPopup::setProgress(const std::string& title, const std::string& detail, int percent)
+{
+	mSticky = true;
+	mPercent = percent;
+	mMessage = title;
+
+	if (!mThemed || mText == nullptr)
+		return;
+
+	const Window::PopupStyle& style = mWindow->getNoticeStyle();
+	float textX = mText->getPosition().x();
+	float textWidth = Math::max(0.0f, style.size.x() - textX - Math::round(mRowHeight * 0.4f));
+
+	mText->setText(title);
+	mText->setSize(textWidth, mRowHeight);
+
+	if (mDetail == nullptr)
+	{
+		mDetail = std::make_shared<TextComponent>(mWindow, detail, style.font, style.color, ALIGN_LEFT);
+		mDetail->setMultiLine(TextComponent::MultiLineType::SINGLELINE);
+		mDetail->setPosition(textX, Math::round(mRowHeight * 0.78f));
+		addChild(mDetail.get());
+	}
+
+	mDetail->setText(detail);
+	mDetail->setSize(textWidth, mRowHeight);
+
+	mSize = Vector2f(style.size.x(), Math::round(mRowHeight * 2.2f));
+}
+
+void GuiInfoPopup::finish()
+{
+	mSticky = false;
+
+	if (mStartTime == 0)
+		mRunning = false;
+	else
+		mDuration = SDL_GetTicks() - mStartTime + 250;
 }
 
 void GuiInfoPopup::shorten(int ms)
@@ -144,7 +200,13 @@ void GuiInfoPopup::update(int deltaTime)
 	// we only init the actual time when we first start to render
 	if (mStartTime == 0)
 		mStartTime = curTime;
-	else if (curTime - mStartTime > mDuration || curTime < mStartTime)
+	else if (mSticky && curTime - mStartTime > 250)
+	{
+		// A job's progress stays as it is until the job finishes it
+		setOpacity(255);
+		return;
+	}
+	else if (!mSticky && (curTime - mStartTime > mDuration || curTime < mStartTime))
 	{
 		// If we're past the popup duration, no need to render or if SDL reset : Stop
 		mRunning = false;

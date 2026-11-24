@@ -26,6 +26,10 @@ public:
 
 	std::string         getMessage() { return mMessage; }
 
+	// A job's progress: the notice stays, with a second line and a gauge, until finish()
+	void setProgress(const std::string& title, const std::string& detail, int percent);
+	void finish();
+
 private:
 	std::string         mMessage;
 
@@ -45,6 +49,11 @@ private:
 	float               mCornerRadius;
 	std::shared_ptr<ImageComponent> mIcon;
 	std::shared_ptr<TextComponent>  mText;
+
+	bool                mSticky;
+	int                 mPercent;
+	float               mRowHeight;
+	std::shared_ptr<TextComponent>  mDetail;
 };
 
 #endif // ES_APP_GUIS_GUI_INFO_POPUP_H

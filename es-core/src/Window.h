@@ -52,6 +52,10 @@ public:
 
 	void pushGui(GuiComponent* gui);
 	void displayNotificationMessage(std::string message, int duration = -1); 
+
+	// One notice that stays while a job works, with its progress; on the UI thread
+	void showProgress(const std::string& title, const std::string& detail, int percent);
+	void hideProgress();
 	void removeGui(GuiComponent* gui);
 	GuiComponent* peekGui();
 	inline int getGuiStackSize() { return (int)mGuiStack.size(); }
@@ -183,6 +187,7 @@ private:
 	std::vector<PostedFunction> mFunctions;
 
 	std::vector<GuiInfoPopup*> mNotificationPopups;
+	GuiInfoPopup* mProgressPopup = nullptr;
 	void updateNotificationPopups(int deltaTime);
 	void layoutNotificationPopups();
 
