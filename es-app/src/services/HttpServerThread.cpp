@@ -25,6 +25,8 @@
 #include "guis/GuiUpdate.h"
 #include "ContentInstaller.h"
 #include "components/VideoVlcComponent.h"
+#include "components/AsyncNotificationComponent.h"
+#include "utils/StringUtil.h"
 
 /* 
 
@@ -587,6 +589,53 @@ void HttpServerThread::run()
 		}
 
 		mWindow->displayNotificationMessage(req.body);
+	});
+
+	// One panel that stays on screen while an outside job works, such as the kit updater, instead of a notice
+	// that goes away. Body: "<percent>\n<title>\n<text>"; a percent below 0 hides the gauge. The body "close"
+	// takes the panel away.
+	mHttpServer->Post("/progress", [this](const httplib::Request& req, httplib::Response& res)
+	{
+		if (!isAllowed(req, res))
+			return;
+
+		if (req.body.empty())
+		{
+			res.set_content("400 bad request - body is missing", "text/html");
+			res.status = 400;
+			return;
+		}
+
+		std::string body = req.body;
+		Window* w = mWindow;
+		mWindow->postToUiThread([body, w]()
+		{
+			static AsyncNotificationComponent* panel = nullptr;
+
+			if (body == "close")
+			{
+				if (panel != nullptr)
+					panel->close();
+
+				panel = nullptr;
+				return;
+			}
+
+			size_t first = body.find('\n');
+			if (first == std::string::npos)
+				return;
+
+			size_t second = body.find('\n', first + 1);
+			std::string title = body.substr(first + 1, second == std::string::npos ? std::string::npos : second - first - 1);
+			std::string text = second == std::string::npos ? "" : body.substr(second + 1);
+
+			if (panel == nullptr)
+				panel = w->createAsyncNotificationComponent();
+
+			panel->updateTitle(title);
+			panel->updateText(text);
+			panel->updatePercent(Utils::String::toInteger(body.substr(0, first)));
+		});
 	});
 
 	mHttpServer->Post("/launch", [this](const httplib::Request& req, httplib::Response& res)
