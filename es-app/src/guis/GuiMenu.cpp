@@ -1,4 +1,5 @@
 #include "guis/GuiMenu.h"
+#include "CanicaUpdates.h"
 
 #include "components/OptionListComponent.h"
 #include "components/SliderComponent.h"
@@ -205,6 +206,10 @@ GuiMenu::GuiMenu(Window *window, bool animate) : GuiComponent(window), mMenu(win
 		addEntry(_("DEVICE SETTINGS"), true, [this] { openDeviceSettings(); }, "iconSystem");
 #endif
 		addEntry(_("SYSTEM SETTINGS").c_str(), true, [this] { openSystemSettings(); }, "iconSystem");
+
+		// The kit's own page, on a console that has the kit's updater
+		if (!CanicaUpdates::status().empty())
+			addEntry("CANICA", true, [this] { openCanicaSettings(); }, "iconUpdates");
 	}
 	else
 	{
@@ -1239,6 +1244,65 @@ void GuiMenu::openDeveloperSettings()
 			ViewController::get()->reloadAll(window);
 			window->closeSplashScreen();
 		}
+	});
+
+	mWindow->pushGui(s);
+}
+
+// The kit's version and how it updates. The updater is a program outside the menu: this page shows what it
+// last found and leaves it requests. Its words are Spanish, as the kit's theme: the firmware's catalogue of
+// translations cannot carry new ones.
+void GuiMenu::openCanicaSettings()
+{
+	auto status = CanicaUpdates::status();
+	auto theme = ThemeData::getMenuTheme();
+	Window* window = mWindow;
+	GuiSettings* s = new GuiSettings(mWindow, "CANICA");
+
+	s->addWithLabel("VERSIÓN", std::make_shared<TextComponent>(mWindow, status["installed"], theme->Text.font, theme->Text.color));
+
+	std::string mode = CanicaUpdates::mode();
+	auto modes = std::make_shared<OptionListComponent<std::string>>(mWindow, "ACTUALIZACIONES", false);
+	modes->add("PREGUNTAR", "ask", mode == "ask");
+	modes->add("AUTOMÁTICAS", "auto", mode == "auto");
+	modes->add("DESACTIVADAS", "off", mode == "off");
+	s->addWithDescription("ACTUALIZACIONES", status["detail"], modes);
+	s->addSaveFunc([modes]
+	{
+		if (modes->changed())
+		{
+			CanicaUpdates::setMode(modes->getSelected());
+			CanicaUpdates::request("mode");
+		}
+	});
+
+	// An action leaves its request and closes every menu: the updater answers on the main screen. Closing
+	// destroys the row that runs it, so nothing of the row is used after that.
+	auto leave = [](Window* w, const std::shared_ptr<OptionListComponent<std::string>>& chosen, const std::string& request)
+	{
+		if (chosen->changed())
+			CanicaUpdates::setMode(chosen->getSelected());
+
+		CanicaUpdates::request(request);
+
+		while (w->peekGui() && w->peekGui() != ViewController::get())
+			delete w->peekGui();
+	};
+
+	std::string serial = status["serial"];
+	if (!status["available"].empty() && status["ready"] == "1" && !serial.empty() && serial.find_first_not_of("0123456789") == std::string::npos)
+	{
+		s->addEntry("ACTUALIZAR A " + status["available"], false, [window, modes, serial, leave]
+		{
+			leave(window, modes, "install " + serial);
+		});
+	}
+
+	s->addEntry("BUSCAR ACTUALIZACIÓN", false, [window, modes, leave]
+	{
+		Window* w = window;
+		leave(w, modes, "check");
+		w->displayNotificationMessage("Buscando actualizaciones de Canica…");
 	});
 
 	mWindow->pushGui(s);

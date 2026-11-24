@@ -52,6 +52,7 @@ private:
         void openSoundSettings();
         void openUISettings();
         void openUpdatesSettings();
+        void openCanicaSettings();
         
         void openSystemSettings();
         void openGamesSettings();       

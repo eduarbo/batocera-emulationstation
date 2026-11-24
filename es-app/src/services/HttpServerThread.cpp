@@ -25,6 +25,8 @@
 #include "guis/GuiUpdate.h"
 #include "ContentInstaller.h"
 #include "components/VideoVlcComponent.h"
+#include "guis/GuiJobConsole.h"
+#include "CanicaUpdates.h"
 #include "utils/StringUtil.h"
 
 /* 
@@ -624,6 +626,68 @@ void HttpServerThread::run()
 			std::string detail = second == std::string::npos ? "" : body.substr(second + 1);
 
 			w->showProgress(title, detail, Utils::String::toInteger(body.substr(0, first)));
+		});
+	});
+
+	// A terminal screen for an outside job, in themes that style one: the job's steps and a gauge, or a question
+	// with two answers. Body rows: "progress <percent>" or "ask <id>", the title, a tag, the footer, the answers
+	// ("<no>\t<yes>\t<row shown once yes is chosen>", empty for progress), then the log. The answer goes to
+	// the kit updater as the request "later <id>" or "install <id>". The body "close" takes the screen away.
+	mHttpServer->Post("/job-console", [this](const httplib::Request& req, httplib::Response& res)
+	{
+		if (!isAllowed(req, res))
+			return;
+
+		bool closing = req.body == "close";
+		std::vector<std::string> rows = Utils::String::split(req.body, '\n');
+		std::vector<std::string> head = Utils::String::split(rows.empty() ? "" : rows[0], ' ');
+		std::string id = head.size() == 2 ? head[1] : "";
+
+		bool asking = head.size() == 2 && head[0] == "ask" && !id.empty() && id.size() <= 12 && id.find_first_not_of("0123456789") == std::string::npos;
+		bool working = head.size() == 2 && head[0] == "progress" && !id.empty() && id.size() <= 4 && id.find_first_not_of("-0123456789") == std::string::npos;
+		bool sane = rows.size() >= 5 && rows.size() <= 17 && req.body.size() <= 2048;
+
+		for (unsigned char c : req.body)
+			if (c < 0x20 && c != '\n' && c != '\t')
+				sane = false;
+
+		GuiJobConsole::Screen screen;
+		if (!closing && sane && (asking || working))
+		{
+			screen.title = rows[1];
+			screen.tag = rows[2];
+			screen.footer = rows[3];
+			screen.lines.assign(rows.begin() + 5, rows.end());
+
+			if (asking)
+				screen.answers = Utils::String::split(rows[4], '\t');
+			else
+				screen.percent = Utils::String::toInteger(id);
+		}
+
+		if (!closing && (!sane || !(asking || working) || (asking && screen.answers.size() < 2)))
+		{
+			res.set_content("400 bad request - not a console screen", "text/html");
+			res.status = 400;
+			return;
+		}
+
+		if (!closing && !mWindow->getConsoleStyle().enabled)
+		{
+			res.set_content("404 the theme has no console", "text/html");
+			res.status = 404;
+			return;
+		}
+
+		Window* w = mWindow;
+		mWindow->postToUiThread([w, closing, asking, screen, id]()
+		{
+			if (closing)
+				GuiJobConsole::close();
+			else if (asking)
+				GuiJobConsole::show(w, screen, [id](int yes) { CanicaUpdates::request((yes ? "install " : "later ") + id); });
+			else
+				GuiJobConsole::show(w, screen);
 		});
 	});
 

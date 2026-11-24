@@ -1657,6 +1657,7 @@ void Window::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
 	}
 
 	mNoticeStyle = readPopupStyle(elem);
+	mConsoleStyle = readPopupStyle(theme->getElement("screen", "console", "notification"));
 	mMeterStyle = readPopupStyle(theme->getElement("screen", "meters", "notification"));
 
 	if (mClock)

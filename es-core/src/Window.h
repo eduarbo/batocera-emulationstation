@@ -151,6 +151,7 @@ public:
 	};
 
 	const PopupStyle& getNoticeStyle() const { return mNoticeStyle; }
+	const PopupStyle& getConsoleStyle() const { return mConsoleStyle; }
 	const PopupStyle& getMeterStyle() const { return mMeterStyle; }
 
 	std::shared_ptr<BatteryIndicatorComponent>	getBatteryIndicator() { return mBatteryIndicator; }
@@ -227,6 +228,7 @@ private:
 
 	float mNotificationOffsetY = 0.02f;
 	PopupStyle mNoticeStyle;
+	PopupStyle mConsoleStyle;
 	PopupStyle mMeterStyle;
 
 	// The info popups shown at once (a theme's style can cap them; the others wait)
