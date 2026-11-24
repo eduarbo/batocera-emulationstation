@@ -2,9 +2,9 @@
 
 This fork powers a 640 × 480 game browser built around the handheld’s D-pad. It pages through visible rows, plays videos inside cards, completes search words with the shoulder buttons and opens save slots with **X**. Iris and Amber use the same controls.
 
-[Canica home and demos](https://github.com/eduarbo/knulli-linux) · [Install RC30 with your own ROMs](https://github.com/eduarbo/knulli-linux/blob/main/docs/canica-rg35xx-h.md) · [Build the frontend](https://github.com/eduarbo/knulli-linux/tree/main/tools/canica)
+[Canica home and demos](https://github.com/eduarbo/canica) · [Install it with your own ROMs](https://github.com/eduarbo/canica/blob/main/docs/canica-rg35xx-h.md) · [Build the frontend](https://github.com/eduarbo/canica/tree/main/tools/canica)
 
-RC30 ships [frontend `4215ca1`](https://github.com/eduarbo/batocera-emulationstation/tree/4215ca1eb833688a7b34f8f0b2c026584b9110b9) with four Scarab packaging patches. The [firmware fork](https://github.com/eduarbo/knulli-linux) supplies the H700 integration and save adapter. The [bundle tools](https://github.com/eduarbo/knulli-console-bundles) supply the ARM64 build and recovery scripts.
+RC30 and later ship [frontend `4215ca1`](https://github.com/eduarbo/batocera-emulationstation/tree/4215ca1eb833688a7b34f8f0b2c026584b9110b9) with four Scarab packaging patches. The [firmware fork](https://github.com/eduarbo/knulli-linux) supplies the H700 integration. The [bundle tools](https://github.com/eduarbo/knulli-console-bundles) supply the ARM64 build and recovery scripts.
 
 **Fork history.** Scarab pinned the upstream frontend at `4041b56`. The first series reached 110 commits at `78db1ce`. RC27.1 reached `87a1319` with 125 commits and 117 changed files relative to that upstream revision. The standalone build at `8ad22d6` also included the four packaging patches. These counts refer to those fixed revisions. [Historical comparison](https://github.com/eduarbo/batocera-emulationstation/compare/4041b56a714265de81de8165b34fbd10f313a891...87a1319b60c241ddcdc802986a86316fe5569feb) · [15-patch series](https://github.com/eduarbo/batocera-emulationstation/pull/1) · [Build branch](https://github.com/eduarbo/batocera-emulationstation/tree/canica-scarab-build)
 
