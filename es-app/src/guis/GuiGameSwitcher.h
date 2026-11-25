@@ -15,11 +15,12 @@ class ThemeData;
 
 // The recent games, one at a time, each as its automatic save left it: left and right (or L1 and R1) to go
 // through them, A to continue. FN + SELECT opens it in the menu, and during a game too: the Canica kit's guard
-// closes a game that keeps an automatic save state, and the menu opens this when it is back.
+// closes a game that keeps an automatic save state, and the menu opens this when it is back. The collection
+// "continue" (Extras) opens it as well.
 //
-// The theme draws it, with elements of its screen view that are not extras (switcher*): the decoration, the
-// texts the switcher fills, the area of the picture (switcherShot) and the pager's dots (switcherDot and
-// switcherDotOn: their colour, size and the centre of the row).
+// The theme draws it in its custom view "switcher": its extras, bound to the game shown as a game list binds
+// its own, the area of the picture (switcherShot), the line about the save over it (switcherState) and the
+// pager's dots (switcherDot and switcherDotOn: their colour, size and the centre of the row).
 class GuiGameSwitcher : public GuiComponent
 {
 public:
@@ -33,7 +34,10 @@ public:
 	static void onGameStarting(FileData* game);
 	static void onGameEnded();
 
+	~GuiGameSwitcher();
+
 	bool input(InputConfig* config, Input input) override;
+	void update(int deltaTime) override;
 	void render(const Transform4x4f& parentTrans) override;
 	std::vector<HelpPrompt> getHelpPrompts() override;
 
@@ -50,14 +54,13 @@ private:
 	static std::vector<Entry> recentGames(size_t count);
 
 	void select(int index);
-	void setText(const std::string& part, const std::string& text);
 
 	std::shared_ptr<ThemeData> mTheme;
 	std::vector<Entry> mEntries;
 	int mIndex;
 
-	std::vector<std::shared_ptr<GuiComponent>> mParts;			// in the theme's order of depth
-	std::map<std::string, std::shared_ptr<GuiComponent>> mTexts;
+	std::vector<GuiComponent*> mExtras;		// the theme's, in its order of depth
+	std::shared_ptr<GuiComponent> mState;
 	std::unique_ptr<ImageComponent> mImage;
 	Vector4f mArea;
 	float mCorners;

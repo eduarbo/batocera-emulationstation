@@ -8,6 +8,8 @@
 #include "utils/StringUtil.h"
 #include "utils/TimeUtil.h"
 #include "views/ViewController.h"
+#include "BindingManager.h"
+#include "ThemeData.h"
 #include "CanicaActivity.h"
 #include "FileData.h"
 #include "InputConfig.h"
@@ -152,15 +154,7 @@ void GuiGameSwitcher::onGameEnded()
 		Utils::FileSystem::removeFile(AUTOSAVES);
 }
 
-// The theme's decoration first, then the texts the switcher fills: every element is optional
-static const std::vector<std::pair<std::string, bool>> PARTS = {
-	{ "switcherBackground", false }, { "switcherHeader", true }, { "switcherBrand", true }, { "switcherHeading", false },
-	{ "switcherPanel", true }, { "switcherBand", true }, { "switcherPlaysIcon", true }, { "switcherTimeIcon", true },
-	{ "switcherAction", true }, { "switcherActionKey", true }, { "switcherPrevKey", true }, { "switcherNextKey", true },
-	{ "switcherSystem", false }, { "switcherName", false }, { "switcherPlays", false }, { "switcherPlaysLabel", false },
-	{ "switcherTime", false }, { "switcherTimeLabel", false }, { "switcherLastLabel", false }, { "switcherLast", false },
-	{ "switcherStateLabel", false }, { "switcherState", false }, { "switcherDescription", false }, { "switcherActionLabel", false },
-	{ "switcherPosition", false } };
+#define VIEW "switcher"
 
 static std::shared_ptr<ThemeData> currentTheme()
 {
@@ -179,35 +173,21 @@ GuiGameSwitcher::GuiGameSwitcher(Window* window, const std::vector<Entry>& entri
 	setSize(sw, sh);
 
 	mTheme = currentTheme();
-	mArea = Vector4f(sw * 0.33f, sh * 0.09f, sw * 0.64f, sh * 0.8f);
-	mDots = Vector4f(sw * 0.65f, sh * 0.95f, 5, 11);
+	mArea = Vector4f(sw * 0.33f, sh * 0.15f, sw * 0.64f, sh * 0.78f);
+	mDots = Vector4f(sw * 0.65f, sh * 0.96f, 5, 11);
 
 	if (mTheme)
 	{
-		for (auto& part : PARTS)
+		mExtras = ThemeData::makeExtras(mTheme, VIEW, window, true);
+		std::stable_sort(mExtras.begin(), mExtras.end(), [](GuiComponent* a, GuiComponent* b) { return a->getZIndex() < b->getZIndex(); });
+
+		if (mTheme->getElement(VIEW, "switcherState", "text") != nullptr)
 		{
-			std::shared_ptr<GuiComponent> component;
-			if (part.second)
-				component = std::make_shared<ImageComponent>(window, true);
-			else
-				component = std::make_shared<TextComponent>(window);
-
-			const char* type = part.second ? "image" : "text";
-			if (mTheme->getElement("screen", part.first, type) == nullptr)
-				continue;
-
-			component->applyTheme(mTheme, "screen", part.first, ThemeFlags::ALL);
-			mParts.push_back(component);
-			if (!part.second)
-				mTexts[part.first] = component;
+			mState = std::make_shared<TextComponent>(window);
+			mState->applyTheme(mTheme, VIEW, "switcherState", ThemeFlags::ALL);
 		}
 
-		std::stable_sort(mParts.begin(), mParts.end(), [](const std::shared_ptr<GuiComponent>& a, const std::shared_ptr<GuiComponent>& b)
-		{
-			return a->getZIndex() < b->getZIndex();
-		});
-
-		auto shot = mTheme->getElement("screen", "switcherShot", "image");
+		auto shot = mTheme->getElement(VIEW, "switcherShot", "image");
 		if (shot && shot->has("pos") && shot->has("size"))
 		{
 			Vector2f pos = shot->get<Vector2f>("pos"), size = shot->get<Vector2f>("size");
@@ -216,7 +196,7 @@ GuiGameSwitcher::GuiGameSwitcher(Window* window, const std::vector<Entry>& entri
 				mCorners = shot->get<float>("roundCorners");
 		}
 
-		auto dot = mTheme->getElement("screen", "switcherDot", "text");
+		auto dot = mTheme->getElement(VIEW, "switcherDot", "text");
 		if (dot && dot->has("pos") && dot->has("size"))
 		{
 			Vector2f pos = dot->get<Vector2f>("pos"), size = dot->get<Vector2f>("size");
@@ -225,7 +205,7 @@ GuiGameSwitcher::GuiGameSwitcher(Window* window, const std::vector<Entry>& entri
 				mDotColor = dot->get<unsigned int>("color");
 		}
 
-		auto on = mTheme->getElement("screen", "switcherDotOn", "text");
+		auto on = mTheme->getElement(VIEW, "switcherDotOn", "text");
 		if (on && on->has("color"))
 			mDotOnColor = on->get<unsigned int>("color");
 	}
@@ -233,11 +213,10 @@ GuiGameSwitcher::GuiGameSwitcher(Window* window, const std::vector<Entry>& entri
 	select(0);
 }
 
-void GuiGameSwitcher::setText(const std::string& part, const std::string& text)
+GuiGameSwitcher::~GuiGameSwitcher()
 {
-	auto it = mTexts.find(part);
-	if (it != mTexts.end())
-		std::static_pointer_cast<TextComponent>(it->second)->setText(text);
+	for (auto extra : mExtras)
+		delete extra;
 }
 
 void GuiGameSwitcher::select(int index)
@@ -246,28 +225,17 @@ void GuiGameSwitcher::select(int index)
 	mIndex = ((index % count) + count) % count;
 	const Entry& entry = mEntries[mIndex];
 	FileData* game = entry.game;
-	SystemData* system = game->getSourceFileData()->getSystem();
 
-	long seconds = atol(game->getMetadata(MetaDataId::GameTime).c_str());
-	int plays = Utils::String::toInteger(game->getMetadata(MetaDataId::PlayCount));
-	std::string last = game->getMetadata(MetaDataId::LastPlayed);
+	// The column is the game list's: its elements take this game as a game list's take the selected one
+	for (auto extra : mExtras)
+		BindingManager::updateBindings(extra, game);
 
-	setText("switcherSystem", system ? system->getFullName() : "");
-	setText("switcherName", game->getName());
-	setText("switcherPlays", plays > 0 ? std::to_string(plays) : "—");
-	setText("switcherPlaysLabel", plays == 1 ? "vez" : "veces");
-	setText("switcherTime", seconds > 0 ? CanicaActivity::duration(seconds) : "—");
-	setText("switcherTimeLabel", "tiempo");
-	setText("switcherLastLabel", "Última vez");
-	setText("switcherLast", last.size() >= 15 ? when(Utils::Time::stringToTime(last)) : "—");
-	setText("switcherStateLabel", entry.resumes ? "Partida automática" : "Sin partida automática");
-	setText("switcherState", entry.resumes ? when(entry.saved) : "abre desde su guardado");
-	setText("switcherActionLabel", entry.resumes ? "Continuar" : "Jugar");
-	setText("switcherDescription", game->getMetadata(MetaDataId::Desc));
-	setText("switcherPosition", std::to_string(mIndex + 1) + " de " + std::to_string(count));
+	if (mState)
+		std::static_pointer_cast<TextComponent>(mState)->setText(entry.resumes ? "Partida automática · " + when(entry.saved) :
+			"Sin partida automática: abre desde su guardado");
 
 	// The picture: the automatic state's screenshot, else the game's image. Pixel art grows by whole steps,
-	// sharp; anything else fits the area, smooth.
+	// sharp; anything else fits the area.
 	mImage = std::unique_ptr<ImageComponent>(new ImageComponent(mWindow, true));
 	mImage->setImage(entry.image);
 
@@ -318,33 +286,45 @@ bool GuiGameSwitcher::input(InputConfig* config, Input input)
 	return true;
 }
 
+void GuiGameSwitcher::update(int deltaTime)
+{
+	for (auto extra : mExtras)
+		extra->update(deltaTime);
+
+	GuiComponent::update(deltaTime);
+}
+
 void GuiGameSwitcher::render(const Transform4x4f& /*parentTrans*/)
 {
 	Transform4x4f identity = Transform4x4f::Identity();
 
-	// Without the theme's background, the menu under it is dimmed
-	if (mTexts.find("switcherBackground") == mTexts.end())
+	// Without the theme's view, the menu under it is dimmed
+	if (mExtras.empty())
 	{
 		Renderer::setMatrix(identity);
 		Renderer::drawRect(0.0f, 0.0f, (float)Renderer::getScreenWidth(), (float)Renderer::getScreenHeight(), 0x000000E0);
 	}
 
+	// The picture goes over the background and the panel, under everything drawn above it
 	bool drawn = false;
-	for (auto& part : mParts)
+	for (auto extra : mExtras)
 	{
-		// The picture goes under the panel's texts and over the background and the header
-		if (!drawn && part->getZIndex() >= 30)
+		if (!drawn && extra->getZIndex() >= 30)
 		{
 			if (mImage)
 				mImage->render(identity);
 			drawn = true;
 		}
 
-		part->render(identity);
+		if (extra->isVisible())
+			extra->render(identity);
 	}
 
 	if (!drawn && mImage)
 		mImage->render(identity);
+
+	if (mState)
+		mState->render(identity);
 
 	int count = (int)mEntries.size();
 	if (count > 1)

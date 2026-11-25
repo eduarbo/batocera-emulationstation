@@ -275,6 +275,13 @@ void ViewController::goToGameList(SystemData* system, bool forceImmediate)
 	if (system == nullptr)
 		return;
 
+	// Extras > Continuar is the game switcher, not a list
+	if (system->isCollection() && system->getName() == "continue")
+	{
+		GuiGameSwitcher::open(mWindow);
+		return;
+	}
+
 	mCycleFrom.reset();
 	SystemData* destinationSystem = system;
 	FolderData* collectionFolder = nullptr;

@@ -29,6 +29,7 @@ enum CollectionSystemType
 	AUTO_WHEEL,
 	AUTO_TRACKBALL,
 	AUTO_SPINNER,
+	AUTO_CONTINUE,		// the recent games, opened as the game switcher (Canica)
 	CUSTOM_COLLECTION,	
 };
 

@@ -23,10 +23,12 @@
 #include "Genres.h"
 #include "Paths.h"
 #include "Scripting.h"
+#include "CanicaUpdates.h"
 
 std::string myCollectionsName = "collections";
 
 #define LAST_PLAYED_MAX	50
+#define CONTINUE_MAX	15	// the game switcher's games
 
 /* Handling the getting, initialization, deinitialization, saving and deletion of
  * a CollectionSystemManager Instance */
@@ -39,6 +41,7 @@ std::vector<CollectionSystemDecl> CollectionSystemManager::getSystemDecls()
 		//type						name            long name                 default sort					  theme folder               isCustom     displayIfEmpty
 		{ AUTO_ALL_GAMES,			"all",				_("all games"),         FileSorts::FILENAME_ASCENDING,    "auto-allgames",           false,       true },
 		{ AUTO_LAST_PLAYED,			"recent",			_("last played"),       FileSorts::LASTPLAYED_ASCENDING,  "auto-lastplayed",         false,       true },
+		{ AUTO_CONTINUE,			"continue",			"Continuar",            FileSorts::LASTPLAYED_ASCENDING,  "auto-continue",           false,       false },
 		{ AUTO_FAVORITES,			"favorites",		_("favorites"),         FileSorts::FILENAME_ASCENDING,    "auto-favorites",          false,       true },
 		{ AUTO_AT2PLAYERS,			"2players",			_("2 players"),         FileSorts::FILENAME_ASCENDING,    "auto-at2players",         false,       true }, 
 		{ AUTO_AT4PLAYERS,			"4players",			_("4 players"),         FileSorts::FILENAME_ASCENDING,    "auto-at4players",         false,       true }, 
@@ -359,6 +362,12 @@ void CollectionSystemManager::loadCollectionSystems()
 	loadEnabledListFromSettings();	
 }
 
+// The game switcher's collection is there whenever the Canica kit is: it is how Extras opens it
+static bool alwaysEnabled(const std::string& name)
+{
+	return name == "continue" && CanicaUpdates::kitInstalled();
+}
+
 // loads settings
 void CollectionSystemManager::loadEnabledListFromSettings()
 {
@@ -367,7 +376,8 @@ void CollectionSystemManager::loadEnabledListFromSettings()
 
 	// iterate the map
 	for(auto& item : mAutoCollectionSystemsData)
-		item.second.isEnabled = (std::find(autoSelected.cbegin(), autoSelected.cend(), item.first) != autoSelected.cend());
+		item.second.isEnabled = (std::find(autoSelected.cbegin(), autoSelected.cend(), item.first) != autoSelected.cend()) ||
+			alwaysEnabled(item.first);
 
 	// we parse the custom collection settings list
 	std::vector<std::string> customSelected = Utils::String::split(Settings::getInstance()->getString("CollectionSystemsCustom"), ',', true);
@@ -499,7 +509,7 @@ void CollectionSystemManager::updateCollectionSystem(FileData* file, const Colle
 	else
 	{
 		// we didn't find it here - we need to check if we should add it
-		if (name == "recent" && isPlayedGame(file) && includeFileInAutoCollections(file) ||
+		if ((name == "recent" || name == "continue") && isPlayedGame(file) && includeFileInAutoCollections(file) ||
 			name == "favorites" && file->getFavorite())
 		{
 			auto newGame = new CollectionFileData(file, curSys);
@@ -510,10 +520,10 @@ void CollectionSystemManager::updateCollectionSystem(FileData* file, const Colle
 
 	curSys->updateDisplayedGameCount();
 
-	if (name == "recent")
+	if (name == "recent" || name == "continue")
 	{
 		sortLastPlayed(curSys);
-		trimCollectionCount(rootFolder, LAST_PLAYED_MAX);
+		trimCollectionCount(rootFolder, name == "continue" ? CONTINUE_MAX : LAST_PLAYED_MAX);
 	}
 	
 	if (view != nullptr)
@@ -932,7 +942,8 @@ SystemData* CollectionSystemManager::createNewCollectionEntry(std::string name, 
 	
 	// we parse the auto collection settings list
 	std::vector<std::string> selected = Utils::String::split(Settings::getInstance()->getString(sysDecl.isCustom ? "CollectionSystemsCustom" : "CollectionSystemsAuto"), ',', true);
-	bool loadThemeIfEnabled = (name == myCollectionsName || (std::find(selected.cbegin(), selected.cend(), name) != selected.cend()));
+	bool loadThemeIfEnabled = (name == myCollectionsName || (std::find(selected.cbegin(), selected.cend(), name) != selected.cend())) ||
+		alwaysEnabled(name);
 
 	SystemData* newSys = new SystemData(md, mCollectionEnvData, NULL, true, false, loadThemeIfEnabled); 
 		
@@ -1031,6 +1042,7 @@ void CollectionSystemManager::populateAutoCollection(CollectionSystemData* sysDa
 				include = game->hasCheevos();
 				break;
 			case AUTO_LAST_PLAYED:
+			case AUTO_CONTINUE:
 				include = isPlayedGame(game);
 				break;
 			case AUTO_NEVER_PLAYED:
@@ -1080,10 +1092,10 @@ void CollectionSystemManager::populateAutoCollection(CollectionSystemData* sysDa
 		}
 	}
 
-	if (sysDecl.type == AUTO_LAST_PLAYED)
+	if (sysDecl.type == AUTO_LAST_PLAYED || sysDecl.type == AUTO_CONTINUE)
 	{
 		sortLastPlayed(newSys);
-		trimCollectionCount(rootFolder, LAST_PLAYED_MAX);
+		trimCollectionCount(rootFolder, sysDecl.type == AUTO_CONTINUE ? CONTINUE_MAX : LAST_PLAYED_MAX);
 	}
 
 	sysData->isPopulated = true;

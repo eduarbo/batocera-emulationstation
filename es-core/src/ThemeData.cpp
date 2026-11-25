@@ -2736,7 +2736,8 @@ std::vector<std::pair<std::string, std::string>> ThemeData::getViewsOfTheme()
 	std::vector<std::pair<std::string, std::string>> ret;
 	for (auto it = mViews.cbegin(); it != mViews.cend(); ++it)
 	{
-		if (it->first == "menu" || it->first == "system" || it->first == "screen" || it->first == "splash")
+		// "switcher" is the game switcher's own view, not a way to show a game list
+		if (it->first == "menu" || it->first == "system" || it->first == "screen" || it->first == "splash" || it->first == "switcher")
 			continue;
 
 		ret.push_back(std::pair<std::string, std::string>(it->first, it->second.displayName.empty() ? it->first : it->second.displayName));
