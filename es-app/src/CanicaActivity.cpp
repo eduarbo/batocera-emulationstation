@@ -72,7 +72,7 @@ CanicaActivity::Summary CanicaActivity::summarize(size_t topCount)
 			if (seconds > 0)
 			{
 				summary.totalSeconds += seconds;
-				summary.top.push_back({ game->getName(), seconds });
+				summary.top.push_back({ game->getCleanName(), seconds });
 			}
 		}
 	}

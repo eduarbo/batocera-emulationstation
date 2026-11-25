@@ -1269,7 +1269,7 @@ void GuiMenu::openCanicaSettings()
 
 		GuiGameSwitcher::open(window);
 	});
-	s->addEntry("ACTIVIDAD", true, [window] { window->pushGui(new GuiActivity(window)); });
+	s->addEntry("ACTIVIDAD", true, [window] { GuiActivity::open(window); });
 
 	// What follows needs the kit's updater
 	if (status.empty())

@@ -17,20 +17,17 @@ namespace TerminalStyle
 {
 	unsigned int alpha(unsigned int color, unsigned int a);
 
-	// Letters set apart, as on the title bar of an old terminal
-	std::string spaced(const std::string& text);
-
 	// The text cut to the width, with an ellipsis
 	std::string fit(const std::shared_ptr<Font>& font, const std::string& text, float width);
 
 	// The theme's console element when it styles one, else the menu's colours and font
 	Window::PopupStyle get(Window* window);
 
+	// The style's typeface at a height relative to the screen's (0.0229: the title bars and footers)
+	std::shared_ptr<Font> font(const Window::PopupStyle& style, float screenHeight);
+
 	// The dimmed screen, the glow of a phosphor screen, the box and the rules under its title bar and over its footer
 	void drawFrame(const Window::PopupStyle& style, float x, float y, float w, float h, float bar, float foot);
-
-	// Scan lines over everything, barely there
-	void drawScanLines();
 
 	class TextLayer
 	{

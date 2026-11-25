@@ -11,23 +11,6 @@ unsigned int TerminalStyle::alpha(unsigned int color, unsigned int a)
 	return (color & 0xFFFFFF00) | (((color & 0xFF) * a) / 255);
 }
 
-std::string TerminalStyle::spaced(const std::string& text)
-{
-	std::string out;
-
-	for (size_t i = 0; i < text.size(); )
-	{
-		size_t next = Utils::String::nextCursor(text, i);
-		out += text.substr(i, next - i);
-		if (next < text.size())
-			out += ' ';
-
-		i = next;
-	}
-
-	return out;
-}
-
 std::string TerminalStyle::fit(const std::shared_ptr<Font>& font, const std::string& text, float width)
 {
 	if (font->sizeText(text).x() <= width)
@@ -65,6 +48,11 @@ Window::PopupStyle TerminalStyle::get(Window* window)
 	return style;
 }
 
+std::shared_ptr<Font> TerminalStyle::font(const Window::PopupStyle& style, float screenHeight)
+{
+	return Font::get(Math::max(8, (int)Math::round(Renderer::getScreenHeight() * screenHeight)), style.font->getPath());
+}
+
 void TerminalStyle::drawFrame(const Window::PopupStyle& style, float x, float y, float w, float h, float bar, float foot)
 {
 	unsigned int accent = style.fillColor;
@@ -82,16 +70,6 @@ void TerminalStyle::drawFrame(const Window::PopupStyle& style, float x, float y,
 
 	if (foot > 0)
 		Renderer::drawRect(x + 1, y + h - foot, w - 2, 1.0f, alpha(accent, 60));
-}
-
-void TerminalStyle::drawScanLines()
-{
-	float w = (float)Renderer::getScreenWidth();
-	float h = (float)Renderer::getScreenHeight();
-
-	Renderer::setMatrix(Transform4x4f::Identity());
-	for (float line = 0; line < h; line += 3)
-		Renderer::drawRect(0.0f, line, w, 1.0f, 0x00000022);
 }
 
 void TerminalStyle::TextLayer::clear()
@@ -115,6 +93,8 @@ void TerminalStyle::TextLayer::addRight(const std::shared_ptr<Font>& font, const
 
 void TerminalStyle::TextLayer::render()
 {
+	// The texts are laid out on the screen, whatever an image drawn before left in the matrix
+	Renderer::setMatrix(Transform4x4f::Identity());
 	for (auto& text : mTexts)
 		text.first->renderTextCache(text.second);
 }

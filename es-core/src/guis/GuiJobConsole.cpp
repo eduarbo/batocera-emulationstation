@@ -14,7 +14,6 @@
 #define TAKEOVER_LIMIT 45000	// and so is one that does not take over after a yes
 
 using TerminalStyle::alpha;
-using TerminalStyle::spaced;
 
 GuiJobConsole* GuiJobConsole::sInstance = nullptr;
 
@@ -78,7 +77,7 @@ void GuiJobConsole::layout()
 		return;
 
 	mFont = style.font;
-	mSmallFont = Font::get(Math::max(8, (int)Math::round(mFont->getSize() * 0.74f)), mFont->getPath());
+	mSmallFont = TerminalStyle::font(style, 0.0229f);
 
 	float x = Math::round(style.pos.x() - style.size.x() * style.origin.x());
 	float y = Math::round(style.pos.y() - style.size.y() * style.origin.y());
@@ -99,7 +98,7 @@ void GuiJobConsole::layout()
 	unsigned int accent = style.fillColor;
 
 	// the title bar: what this is, and from which version to which
-	add(mSmallFont, spaced(mScreen.title), x + pad, y + (mBar - small) / 2, muted);
+	add(mSmallFont, mScreen.title, x + pad, y + (mBar - small) / 2, muted);
 	add(mSmallFont, mScreen.tag, x + w - pad - mSmallFont->sizeText(mScreen.tag).x(), y + (mBar - small) / 2, accent);
 
 	// the log: a prompt, the steps done and the one under way with its cursor
@@ -160,7 +159,7 @@ void GuiJobConsole::layout()
 		add(mFont, percent, x + w - pad - mFont->sizeText(percent).x(), gy - (line - row * 0.6f) / 2, ink);
 	}
 
-	add(mSmallFont, spaced(mScreen.footer), x + pad, y + h - mFoot + (mFoot - small) / 2, accent);
+	add(mSmallFont, mScreen.footer, x + pad, y + h - mFoot + (mFoot - small) / 2, accent);
 }
 
 bool GuiJobConsole::input(InputConfig* config, Input input)
@@ -250,7 +249,6 @@ void GuiJobConsole::render(const Transform4x4f& /*parentTrans*/)
 		Renderer::drawRect(mCursor.x(), mCursor.y(), mCursor.z(), mCursor.w(), accent);
 
 	mText.render();
-	TerminalStyle::drawScanLines();
 }
 
 std::vector<HelpPrompt> GuiJobConsole::getHelpPrompts()

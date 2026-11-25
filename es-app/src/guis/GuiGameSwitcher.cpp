@@ -1,6 +1,7 @@
 #include "guis/GuiGameSwitcher.h"
 
 #include "components/ImageComponent.h"
+#include "components/TextComponent.h"
 #include "renderers/Renderer.h"
 #include "resources/Font.h"
 #include "utils/FileSystemUtil.h"
@@ -15,12 +16,11 @@
 #include "SystemData.h"
 #include "Window.h"
 #include <algorithm>
+#include <cstdlib>
 #include <sys/stat.h>
 
 #define RECENT 15
 #define REQUEST_AGE 300		// a request older than this is from another time: it opens nothing
-
-using TerminalStyle::alpha;
 
 const std::string GuiGameSwitcher::REQUEST = "/var/run/canica/switcher-request";
 const std::string GuiGameSwitcher::AUTOSAVES = "/var/run/canica/game-autosaves";
@@ -89,8 +89,13 @@ std::vector<GuiGameSwitcher::Entry> GuiGameSwitcher::recentGames(size_t count)
 			if (state != nullptr && state->slot == -1 && !state->fileName.empty())
 			{
 				entry.resumes = true;
-				entry.image = state->screenshot;
 				entry.saved = state->creationDate.getTime();
+
+				// The screenshot only when it was taken with this save: another one shows another moment
+				struct stat picture;
+				if (!state->screenshot.empty() && stat(state->screenshot.c_str(), &picture) == 0 &&
+					std::abs((long)(picture.st_mtime - entry.saved)) <= 120)
+					entry.image = state->screenshot;
 			}
 		}
 
@@ -147,19 +152,92 @@ void GuiGameSwitcher::onGameEnded()
 		Utils::FileSystem::removeFile(AUTOSAVES);
 }
 
+// The theme's decoration first, then the texts the switcher fills: every element is optional
+static const std::vector<std::pair<std::string, bool>> PARTS = {
+	{ "switcherBackground", false }, { "switcherHeader", true }, { "switcherBrand", true }, { "switcherHeading", false },
+	{ "switcherPanel", true }, { "switcherBand", true }, { "switcherPlaysIcon", true }, { "switcherTimeIcon", true },
+	{ "switcherAction", true }, { "switcherActionKey", true }, { "switcherPrevKey", true }, { "switcherNextKey", true },
+	{ "switcherSystem", false }, { "switcherName", false }, { "switcherPlays", false }, { "switcherPlaysLabel", false },
+	{ "switcherTime", false }, { "switcherTimeLabel", false }, { "switcherLastLabel", false }, { "switcherLast", false },
+	{ "switcherStateLabel", false }, { "switcherState", false }, { "switcherDescription", false }, { "switcherActionLabel", false },
+	{ "switcherPosition", false } };
+
+static std::shared_ptr<ThemeData> currentTheme()
+{
+	for (auto system : SystemData::sSystemVector)
+		if (system->getTheme() != nullptr)
+			return system->getTheme();
+
+	return nullptr;
+}
+
 GuiGameSwitcher::GuiGameSwitcher(Window* window, const std::vector<Entry>& entries) : GuiComponent(window),
-	mEntries(entries), mIndex(0), mBar(0), mFoot(0)
+	mEntries(entries), mIndex(0), mCorners(0), mDotColor(0x43536BFF), mDotOnColor(0xCFCBFFFF)
 {
 	float sw = (float)Renderer::getScreenWidth();
 	float sh = (float)Renderer::getScreenHeight();
 	setSize(sw, sh);
 
-	mStyle = TerminalStyle::get(window);
+	mTheme = currentTheme();
+	mArea = Vector4f(sw * 0.33f, sh * 0.09f, sw * 0.64f, sh * 0.8f);
+	mDots = Vector4f(sw * 0.65f, sh * 0.95f, 5, 11);
+
+	if (mTheme)
+	{
+		for (auto& part : PARTS)
+		{
+			std::shared_ptr<GuiComponent> component;
+			if (part.second)
+				component = std::make_shared<ImageComponent>(window, true);
+			else
+				component = std::make_shared<TextComponent>(window);
+
+			const char* type = part.second ? "image" : "text";
+			if (mTheme->getElement("screen", part.first, type) == nullptr)
+				continue;
+
+			component->applyTheme(mTheme, "screen", part.first, ThemeFlags::ALL);
+			mParts.push_back(component);
+			if (!part.second)
+				mTexts[part.first] = component;
+		}
+
+		std::stable_sort(mParts.begin(), mParts.end(), [](const std::shared_ptr<GuiComponent>& a, const std::shared_ptr<GuiComponent>& b)
+		{
+			return a->getZIndex() < b->getZIndex();
+		});
+
+		auto shot = mTheme->getElement("screen", "switcherShot", "image");
+		if (shot && shot->has("pos") && shot->has("size"))
+		{
+			Vector2f pos = shot->get<Vector2f>("pos"), size = shot->get<Vector2f>("size");
+			mArea = Vector4f(pos.x() * sw, pos.y() * sh, size.x() * sw, size.y() * sh);
+			if (shot->has("roundCorners"))
+				mCorners = shot->get<float>("roundCorners");
+		}
+
+		auto dot = mTheme->getElement("screen", "switcherDot", "text");
+		if (dot && dot->has("pos") && dot->has("size"))
+		{
+			Vector2f pos = dot->get<Vector2f>("pos"), size = dot->get<Vector2f>("size");
+			mDots = Vector4f(pos.x() * sw, pos.y() * sh, Math::round(size.y() * sh), Math::round(size.x() * sw));
+			if (dot->has("color"))
+				mDotColor = dot->get<unsigned int>("color");
+		}
+
+		auto on = mTheme->getElement("screen", "switcherDotOn", "text");
+		if (on && on->has("color"))
+			mDotOnColor = on->get<unsigned int>("color");
+	}
+
 	select(0);
 }
 
-GuiGameSwitcher::~GuiGameSwitcher()
+void GuiGameSwitcher::setText(const std::string& part, const std::string& text)
 {
+	auto it = mTexts.find(part);
+	if (it != mTexts.end())
+		std::static_pointer_cast<TextComponent>(it->second)->setText(text);
 }
 
 void GuiGameSwitcher::select(int index)
@@ -168,38 +246,28 @@ void GuiGameSwitcher::select(int index)
 	mIndex = ((index % count) + count) % count;
 	const Entry& entry = mEntries[mIndex];
 	FileData* game = entry.game;
+	SystemData* system = game->getSourceFileData()->getSystem();
 
-	float sw = (float)Renderer::getScreenWidth();
-	float sh = (float)Renderer::getScreenHeight();
-	auto font = mStyle.font;
-	auto small = Font::get(Math::max(8, (int)Math::round(font->getSize() * 0.74f)), font->getPath());
+	long seconds = atol(game->getMetadata(MetaDataId::GameTime).c_str());
+	int plays = Utils::String::toInteger(game->getMetadata(MetaDataId::PlayCount));
+	std::string last = game->getMetadata(MetaDataId::LastPlayed);
 
-	float margin = Math::round(Math::max(8.0f, (sw - mStyle.size.x()) / 2));
-	float x = margin, y = Math::round(margin * 0.5f), w = sw - margin * 2, h = sh - y * 2 - Math::round(sh * 0.05f);
-	mBox = Vector4f(x, y, w, h);
+	setText("switcherSystem", system ? system->getFullName() : "");
+	setText("switcherName", game->getName());
+	setText("switcherPlays", plays > 0 ? std::to_string(plays) : "—");
+	setText("switcherPlaysLabel", plays == 1 ? "vez" : "veces");
+	setText("switcherTime", seconds > 0 ? CanicaActivity::duration(seconds) : "—");
+	setText("switcherTimeLabel", "tiempo");
+	setText("switcherLastLabel", "Última vez");
+	setText("switcherLast", last.size() >= 15 ? when(Utils::Time::stringToTime(last)) : "—");
+	setText("switcherStateLabel", entry.resumes ? "Partida automática" : "Sin partida automática");
+	setText("switcherState", entry.resumes ? when(entry.saved) : "abre desde su guardado");
+	setText("switcherActionLabel", entry.resumes ? "Continuar" : "Jugar");
+	setText("switcherDescription", game->getMetadata(MetaDataId::Desc));
+	setText("switcherPosition", std::to_string(mIndex + 1) + " de " + std::to_string(count));
 
-	float ch = font->sizeText("0").x();
-	float line = font->getHeight(1.0f);
-	float row = Math::round(line * 1.42f);
-	float smallLine = small->getHeight(1.0f);
-	float pad = Math::round(ch * 2);
-	mBar = Math::round(smallLine * 2.3f);
-	mFoot = Math::round(smallLine * 2.6f);
-
-	unsigned int ink = mStyle.color;
-	unsigned int muted = alpha(ink, 150);
-	unsigned int accent = mStyle.fillColor;
-
-	mText.clear();
-	mText.add(small, TerminalStyle::spaced("CANICA // CONTINUAR"), x + pad, y + (mBar - smallLine) / 2, muted);
-	mText.addRight(small, std::to_string(mIndex + 1) + " / " + std::to_string(count), x + w - pad, y + (mBar - smallLine) / 2, accent);
-
-	// The picture: the automatic state's screenshot, else the game's image. Pixel art grows by whole steps.
-	float infoHeight = row * 3;
-	float pagerHeight = Math::round(line * 0.5f);
-	mArea = Vector4f(x + pad + ch * 2, y + mBar + Math::round(row * 0.4f), w - (pad + ch * 2) * 2,
-		h - mBar - mFoot - infoHeight - pagerHeight - Math::round(row * 1.2f));
-
+	// The picture: the automatic state's screenshot, else the game's image. Pixel art grows by whole steps,
+	// sharp; anything else fits the area, smooth.
 	mImage = std::unique_ptr<ImageComponent>(new ImageComponent(mWindow, true));
 	mImage->setImage(entry.image);
 
@@ -211,50 +279,16 @@ void GuiGameSwitcher::select(int index)
 		mImage->setResize((float)(texture.x() * scale), (float)(texture.y() * scale));
 	}
 	else
+	{
+		mImage->setIsLinear(texture.x() > 400);
 		mImage->setMaxSize(mArea.z(), mArea.w());
+	}
+
+	if (mCorners > 0)
+		mImage->setRoundCorners(mCorners);
 
 	Vector2f size = mImage->getSize();
 	mImage->setPosition(Math::round(mArea.x() + (mArea.z() - size.x()) / 2), Math::round(mArea.y() + (mArea.w() - size.y()) / 2));
-
-	// Left and right of the picture, in the margin
-	float middle = mArea.y() + mArea.w() / 2 - line / 2;
-	if (count > 1)
-	{
-		mText.add(font, "<", x + pad, middle, accent);
-		mText.addRight(font, ">", x + w - pad, middle, accent);
-	}
-
-	// Under it: the game, where and how long it was played, and how it continues
-	float ty = mArea.y() + mArea.w() + Math::round(row * 0.4f);
-	float textWidth = w - pad * 2;
-	mText.add(font, TerminalStyle::fit(font, game->getName(), textWidth), x + pad, ty, ink);
-	ty += row;
-
-	std::string details = game->getSourceFileData()->getSystem() ? game->getSourceFileData()->getSystem()->getFullName() : "";
-	long seconds = atol(game->getMetadata(MetaDataId::GameTime).c_str());
-	if (seconds > 0)
-		details += " · jugado " + CanicaActivity::duration(seconds);
-
-	std::string last = game->getMetadata(MetaDataId::LastPlayed);
-	if (last.size() >= 15)
-		details += " · " + when(Utils::Time::stringToTime(last));
-
-	mText.add(font, TerminalStyle::fit(font, details, textWidth), x + pad, ty, muted);
-	ty += row;
-
-	if (entry.resumes)
-	{
-		mText.add(font, ">", x + pad, ty, accent);
-		mText.add(font, TerminalStyle::fit(font, "partida automática · " + when(entry.saved), textWidth - ch * 2), x + pad + ch * 2, ty, accent);
-	}
-	else
-		mText.add(font, "sin partida automática: empieza desde su guardado", x + pad, ty, muted);
-
-	// One cell per game along the footer's rule
-	float cell = Math::round(ch * 1.2f);
-	mPager = Vector4f(x + w - pad - cell * count, y + h - mFoot - pagerHeight - Math::round(row * 0.45f), cell, pagerHeight);
-
-	mText.add(small, TerminalStyle::spaced("A CONTINUAR   B VOLVER"), x + pad, y + h - mFoot + (mFoot - smallLine) / 2, accent);
 	updateHelpPrompts();
 }
 
@@ -286,23 +320,42 @@ bool GuiGameSwitcher::input(InputConfig* config, Input input)
 
 void GuiGameSwitcher::render(const Transform4x4f& /*parentTrans*/)
 {
-	TerminalStyle::drawFrame(mStyle, mBox.x(), mBox.y(), mBox.z(), mBox.w(), mBar, mFoot);
+	Transform4x4f identity = Transform4x4f::Identity();
 
-	// The picture sits in a dark well with a thin lit edge
-	Renderer::drawSolidRectangle(mArea.x() - 4, mArea.y() - 4, mArea.z() + 8, mArea.w() + 8, 0x000000B0, alpha(mStyle.fillColor, 70), 1.0f, 3.0f);
-
-	if (mImage)
+	// Without the theme's background, the menu under it is dimmed
+	if (mTexts.find("switcherBackground") == mTexts.end())
 	{
-		Transform4x4f identity = Transform4x4f::Identity();
-		mImage->render(identity);
+		Renderer::setMatrix(identity);
+		Renderer::drawRect(0.0f, 0.0f, (float)Renderer::getScreenWidth(), (float)Renderer::getScreenHeight(), 0x000000E0);
 	}
 
-	for (int i = 0; i < (int)mEntries.size(); i++)
-		Renderer::drawRect(mPager.x() + i * mPager.z(), mPager.y(), Math::max(1.0f, mPager.z() - 3), mPager.w(),
-			i == mIndex ? mStyle.fillColor : mStyle.trackColor);
+	bool drawn = false;
+	for (auto& part : mParts)
+	{
+		// The picture goes under the panel's texts and over the background and the header
+		if (!drawn && part->getZIndex() >= 30)
+		{
+			if (mImage)
+				mImage->render(identity);
+			drawn = true;
+		}
 
-	mText.render();
-	TerminalStyle::drawScanLines();
+		part->render(identity);
+	}
+
+	if (!drawn && mImage)
+		mImage->render(identity);
+
+	int count = (int)mEntries.size();
+	if (count > 1)
+	{
+		Renderer::setMatrix(identity);
+		float size = mDots.z(), step = mDots.w();
+		float x = Math::round(mDots.x() - (step * (count - 1) + size) / 2);
+		for (int i = 0; i < count; i++)
+			Renderer::drawSolidRectangle(x + i * step, Math::round(mDots.y() - size / 2), size, size,
+				i == mIndex ? mDotOnColor : mDotColor, 0, 0.0f, size / 2);
+	}
 }
 
 std::vector<HelpPrompt> GuiGameSwitcher::getHelpPrompts()
