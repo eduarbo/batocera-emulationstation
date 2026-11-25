@@ -3,6 +3,7 @@
 #define ES_CORE_GUIS_GUI_JOB_CONSOLE_H
 
 #include "GuiComponent.h"
+#include "guis/TerminalStyle.h"
 #include "math/Vector4f.h"
 #include <functional>
 #include <memory>
@@ -45,15 +46,8 @@ public:
 private:
 	GuiJobConsole(Window* window);
 
-	struct Text
-	{
-		std::shared_ptr<Font> font;
-		TextCache* cache;
-	};
-
 	void set(const Screen& screen, const std::function<void(int)>& onAnswer);
 	void layout();
-	void clear();
 	void add(const std::shared_ptr<Font>& font, const std::string& text, float x, float y, unsigned int color);
 	void answer(int index);
 
@@ -68,7 +62,7 @@ private:
 
 	std::shared_ptr<Font> mFont;
 	std::shared_ptr<Font> mSmallFont;
-	std::vector<Text> mTexts;
+	TerminalStyle::TextLayer mText;
 	Vector4f mBox;
 	float mBar;
 	float mFoot;

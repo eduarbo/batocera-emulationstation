@@ -15,6 +15,11 @@ static void replace(const std::string& name, const std::string& text)
 	Utils::FileSystem::renameFile(FOLDER + "/" + name + ".tmp", FOLDER + "/" + name);
 }
 
+bool CanicaUpdates::kitInstalled()
+{
+	return Utils::FileSystem::exists("/userdata/system/canica/SHA256SUMS");
+}
+
 std::map<std::string, std::string> CanicaUpdates::status()
 {
 	std::map<std::string, std::string> values;

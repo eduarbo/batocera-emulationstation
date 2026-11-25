@@ -1,4 +1,5 @@
 #include "views/ViewController.h"
+#include "guis/GuiGameSwitcher.h"
 
 #include "animations/Animation.h"
 #include "animations/LambdaAnimation.h"
@@ -1087,6 +1088,15 @@ bool ViewController::input(InputConfig* config, Input input)
 				mWindow->displayNotificationMessage(_("NO RECENT GAMES"));
 			return true;
 		}
+	}
+
+	// FN + SELECT: the recent games, each where its automatic save left it
+	if (input.value && config->hotkeyHeld() && config->isMappedTo("select", input) && !config->isMappedTo("hotkey", input)
+		&& (mState.viewing == SYSTEM_SELECT || mState.viewing == GAME_LIST))
+	{
+		config->consumeHotkeyConfirm();
+		GuiGameSwitcher::open(mWindow);
+		return true;
 	}
 
 	// open menu

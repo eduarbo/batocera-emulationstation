@@ -126,6 +126,9 @@ set(ES_HEADERS
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ApiSystem.h # batocera
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CanicaUpdates.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CanicaActivity.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiActivity.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiGameSwitcher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LibretroRatio.h # batocera
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Win32ApiSystem.h # batocera
 )
@@ -247,6 +250,9 @@ set(ES_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ApiSystem.cpp # batocera
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CanicaUpdates.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CanicaActivity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiActivity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiGameSwitcher.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LibretroRatio.cpp # batocera
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Win32ApiSystem.cpp # batocera
 )

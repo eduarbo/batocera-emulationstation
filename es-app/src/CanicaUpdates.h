@@ -9,6 +9,9 @@
 // folder: the menu reads what the updater found, and leaves it requests. The menu runs no installer itself.
 namespace CanicaUpdates
 {
+	// The kit is on this card
+	bool kitInstalled();
+
 	// What the updater last wrote: installed, available, serial, ready, detail. Empty without an updater here.
 	std::map<std::string, std::string> status();
 

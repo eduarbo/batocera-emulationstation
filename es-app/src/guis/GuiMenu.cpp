@@ -1,5 +1,7 @@
 #include "guis/GuiMenu.h"
 #include "CanicaUpdates.h"
+#include "guis/GuiActivity.h"
+#include "guis/GuiGameSwitcher.h"
 
 #include "components/OptionListComponent.h"
 #include "components/SliderComponent.h"
@@ -207,8 +209,8 @@ GuiMenu::GuiMenu(Window *window, bool animate) : GuiComponent(window), mMenu(win
 #endif
 		addEntry(_("SYSTEM SETTINGS").c_str(), true, [this] { openSystemSettings(); }, "iconSystem");
 
-		// The kit's own page, on a console that has the kit's updater
-		if (!CanicaUpdates::status().empty())
+		// The kit's own page
+		if (CanicaUpdates::kitInstalled())
 			addEntry("CANICA", true, [this] { openCanicaSettings(); }, "iconUpdates");
 	}
 	else
@@ -1259,6 +1261,24 @@ void GuiMenu::openCanicaSettings()
 	Window* window = mWindow;
 	GuiSettings* s = new GuiSettings(mWindow, "CANICA");
 
+	s->addEntry("CONTINUAR UN JUEGO", true, [window]
+	{
+		// From the main screen: a game started from it returns there
+		while (window->peekGui() && window->peekGui() != ViewController::get())
+			delete window->peekGui();
+
+		GuiGameSwitcher::open(window);
+	});
+	s->addEntry("ACTIVIDAD", true, [window] { window->pushGui(new GuiActivity(window)); });
+
+	// What follows needs the kit's updater
+	if (status.empty())
+	{
+		mWindow->pushGui(s);
+		return;
+	}
+
+	s->addGroup("ACTUALIZACIONES");
 	s->addWithLabel("VERSIÓN", std::make_shared<TextComponent>(mWindow, status["installed"], theme->Text.font, theme->Text.color));
 
 	std::string mode = CanicaUpdates::mode();

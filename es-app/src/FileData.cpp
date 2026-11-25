@@ -35,6 +35,9 @@
 #include "resources/TextureData.h"
 #include "ImageIO.h"
 #include "QuickResume.h"
+#include "CanicaActivity.h"
+#include "guis/GuiGameSwitcher.h"
+#include <chrono>
 
 using namespace Utils::Platform;
 
@@ -775,8 +778,11 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 	const std::string basename = Utils::FileSystem::getStem(getPath());
 
 	Scripting::fireEvent("game-start", rom, basename, getName());
+	GuiGameSwitcher::onGameStarting(gameToUpdate);
 
+	// The play time counts while the console is awake: a game left suspended for hours is not played
 	time_t tstart = time(NULL);
+	auto awakeStart = std::chrono::steady_clock::now();
 
 	LOG(LogInfo) << "	" << command;
 
@@ -792,6 +798,8 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 		LOG(LogWarning) << "...launch terminated with nonzero exit code " << exitCode << "!";
 
 	mRunningGame = nullptr;
+	long elapsedSeconds = (long)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - awakeStart).count();
+	GuiGameSwitcher::onGameEnded();
 
 	if (SaveStateRepository::isEnabled(this))
 	{
@@ -833,11 +841,12 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 
 		// How long have you played that game? (more than 10 seconds, otherwise
 		// you might have experienced a loading problem)
-		time_t tend = time(NULL);
-		long elapsedSeconds = difftime(tend, tstart);
 		long gameTime = gameToUpdate->getMetadata().getInt(MetaDataId::GameTime) + elapsedSeconds;
 		if (elapsedSeconds >= 10)
+		{
 			gameToUpdate->setMetadata(MetaDataId::GameTime, std::to_string(static_cast<long>(gameTime)));
+			CanicaActivity::record(gameToUpdate, tstart, elapsedSeconds);
+		}
 
 		//update last played time
 		gameToUpdate->setMetadata(MetaDataId::LastPlayed, Utils::Time::DateTime(Utils::Time::now()));
@@ -846,6 +855,7 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 	}
 
 	window->reactivateGui();
+	GuiGameSwitcher::openIfRequested(window);
 
 	if (system != nullptr && system->getTheme() != nullptr)
 		AudioManager::getInstance()->changePlaylist(system->getTheme(), true);

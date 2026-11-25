@@ -1,5 +1,6 @@
 #include "guis/GuiJobConsole.h"
 
+#include "guis/TerminalStyle.h"
 #include "renderers/Renderer.h"
 #include "resources/Font.h"
 #include "utils/StringUtil.h"
@@ -12,30 +13,10 @@
 #define QUIET_LIMIT 180000		// a job that says nothing for this long is gone: the menu comes back
 #define TAKEOVER_LIMIT 45000	// and so is one that does not take over after a yes
 
+using TerminalStyle::alpha;
+using TerminalStyle::spaced;
+
 GuiJobConsole* GuiJobConsole::sInstance = nullptr;
-
-static unsigned int alpha(unsigned int color, unsigned int a)
-{
-	return (color & 0xFFFFFF00) | (((color & 0xFF) * a) / 255);
-}
-
-// Letters set apart, as on the title bar of an old terminal
-static std::string spaced(const std::string& text)
-{
-	std::string out;
-
-	for (size_t i = 0; i < text.size(); )
-	{
-		size_t next = Utils::String::nextCursor(text, i);
-		out += text.substr(i, next - i);
-		if (next < text.size())
-			out += ' ';
-
-		i = next;
-	}
-
-	return out;
-}
 
 void GuiJobConsole::show(Window* window, const Screen& screen, const std::function<void(int)>& onAnswer)
 {
@@ -64,7 +45,6 @@ GuiJobConsole::GuiJobConsole(Window* window) : GuiComponent(window),
 
 GuiJobConsole::~GuiJobConsole()
 {
-	clear();
 	PowerSaver::resume();
 
 	if (sInstance == this)
@@ -83,23 +63,14 @@ void GuiJobConsole::set(const Screen& screen, const std::function<void(int)>& on
 	updateHelpPrompts();
 }
 
-void GuiJobConsole::clear()
-{
-	for (auto& text : mTexts)
-		delete text.cache;
-
-	mTexts.clear();
-}
-
 void GuiJobConsole::add(const std::shared_ptr<Font>& font, const std::string& text, float x, float y, unsigned int color)
 {
-	if (!text.empty())
-		mTexts.push_back({ font, font->buildTextCache(text, Math::round(x), Math::round(y), color) });
+	mText.add(font, text, x, y, color);
 }
 
 void GuiJobConsole::layout()
 {
-	clear();
+	mText.clear();
 	mCursor = mGauge = mButtons[0] = mButtons[1] = Vector4f(0, 0, 0, 0);
 
 	const Window::PopupStyle& style = mWindow->getConsoleStyle();
@@ -259,21 +230,8 @@ void GuiJobConsole::render(const Transform4x4f& /*parentTrans*/)
 	if (!style.enabled || mFont == nullptr)
 		return;
 
-	float sw = (float)Renderer::getScreenWidth();
-	float sh = (float)Renderer::getScreenHeight();
-	float x = mBox.x(), y = mBox.y(), w = mBox.z(), h = mBox.w();
 	unsigned int accent = style.fillColor;
-
-	Renderer::setMatrix(Transform4x4f::Identity());
-	Renderer::drawRect(0.0f, 0.0f, sw, sh, style.trackBorderColor);
-
-	// the glow of a phosphor screen, then the window with its two rules
-	for (int i = 3; i > 0; i--)
-		Renderer::drawSolidRectangle(x - i * 2, y - i * 2, w + i * 4, h + i * 4, 0, alpha(accent, 22 * (4 - i)), 2.0f, style.cornerRadius + i * 2);
-
-	Renderer::drawSolidRectangle(x, y, w, h, style.backgroundColor, style.borderColor, 1.0f, style.cornerRadius);
-	Renderer::drawRect(x + 1, y + mBar, w - 2, 1.0f, alpha(accent, 60));
-	Renderer::drawRect(x + 1, y + h - mFoot, w - 2, 1.0f, alpha(accent, 60));
+	TerminalStyle::drawFrame(style, mBox.x(), mBox.y(), mBox.z(), mBox.w(), mBar, mFoot);
 
 	if (mGauge.z() > 0)
 	{
@@ -291,12 +249,8 @@ void GuiJobConsole::render(const Transform4x4f& /*parentTrans*/)
 	if (mCursor.z() > 0 && (mBlink / 530) % 2 == 0)
 		Renderer::drawRect(mCursor.x(), mCursor.y(), mCursor.z(), mCursor.w(), accent);
 
-	for (auto& text : mTexts)
-		text.font->renderTextCache(text.cache);
-
-	// scan lines over everything, barely there
-	for (float line = 0; line < sh; line += 3)
-		Renderer::drawRect(0.0f, line, sw, 1.0f, 0x00000022);
+	mText.render();
+	TerminalStyle::drawScanLines();
 }
 
 std::vector<HelpPrompt> GuiJobConsole::getHelpPrompts()
