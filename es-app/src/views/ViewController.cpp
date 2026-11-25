@@ -1079,8 +1079,9 @@ bool ViewController::input(InputConfig* config, Input input)
 	    Settings::getInstance()->saveFile();
 	  }
 
-	// Claim A before the browser opens the focused card. Modal dialogs and games own their own input.
-	if (input.value && config->hotkeyHeld() && config->isMappedTo("a", input) && !config->isMappedTo("hotkey", input)
+	// FN + START continues the last game: claimed before START opens the menu. Modal dialogs and games own
+	// their own input.
+	if (input.value && config->hotkeyHeld() && config->isMappedTo("start", input) && !config->isMappedTo("hotkey", input)
 		&& (mState.viewing == SYSTEM_SELECT || mState.viewing == GAME_LIST) && mState.system)
 	{
 		auto theme = mState.system->getTheme();

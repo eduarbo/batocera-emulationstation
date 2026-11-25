@@ -77,6 +77,10 @@ namespace HomeSlides
 		// Moves to the next item; false (and stays) when there is no other one
 		bool next(std::mt19937& rng);
 
+		// Moves back to the item shown before in this round, or to the round's last one from its first;
+		// false (and stays) when there is no other one
+		bool previous();
+
 	private:
 		std::vector<std::string> mItems;
 		size_t mIndex;

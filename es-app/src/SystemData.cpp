@@ -2562,6 +2562,24 @@ FileData* SystemData::homePreview(bool advance)
 	return mCollectionPreviews.empty() ? nullptr : findByPath(mCollectionPreviews.current());
 }
 
+FileData* SystemData::stepHomePreview(int direction)
+{
+	if (homePreview(false) == nullptr)            // also builds the deck when the library changed
+		return nullptr;
+
+	if (isPlayHistory() || !isCollection())
+	{
+		size_t count = mHistoryPreviews.size();
+		if (count < 2)
+			return nullptr;
+		mHistoryPreviewIndex = (mHistoryPreviewIndex + (direction < 0 ? count - 1 : 1)) % count;
+		return findByPath(mHistoryPreviews[mHistoryPreviewIndex]);
+	}
+
+	bool moved = direction < 0 ? mCollectionPreviews.previous() : mCollectionPreviews.next(homeRandom(getName() + ":previews"));
+	return moved ? findByPath(mCollectionPreviews.current()) : nullptr;
+}
+
 FileData* SystemData::getContinueGame()
 {
 	if (usesRandomCollectionPreview() || rotatesHomePreview())

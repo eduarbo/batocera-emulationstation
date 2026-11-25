@@ -125,6 +125,8 @@ public:
 	void enterHomePreview();
 	bool hasOtherHomePreview() const;
 	FileData* homePreview(bool advance);
+	// L2/R2 on a card: the panel's previous (direction < 0) or next preview at once; nullptr when it has no other
+	FileData* stepHomePreview(int direction);
 	static bool isUtilitySystem(SystemData* system);
 	// The game played last on the console (tools and screenshots left out)
 	static FileData* getConsoleLastPlayedGame();

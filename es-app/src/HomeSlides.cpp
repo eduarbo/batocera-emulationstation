@@ -235,4 +235,13 @@ namespace HomeSlides
 		mIndex = 0;
 		return true;
 	}
+
+	bool Deck::previous()
+	{
+		if (mItems.size() < 2)
+			return false;
+
+		mIndex = mIndex == 0 ? mItems.size() - 1 : mIndex - 1;
+		return true;
+	}
 }

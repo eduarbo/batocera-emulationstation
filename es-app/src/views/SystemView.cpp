@@ -660,7 +660,21 @@ bool SystemView::input(InputConfig* config, Input input)
 		{
 			if (config->isMappedTo("l2", input) || config->isMappedTo("r2", input))
 			{
-				grid->pageRows(config->isMappedTo("l2", input) ? -1 : 1);
+				// On a card whose panel goes through several previews, L2 and R2 show the previous or next
+				// one at once; elsewhere they page the cards
+				int direction = config->isMappedTo("l2", input) ? -1 : 1;
+				auto system = getSelected();
+				if (system && homePanelActive() && (system->rotatesHomePreview() || system->usesRandomCollectionPreview()) &&
+					system->hasOtherHomePreview())
+				{
+					if (system->stepHomePreview(direction))
+					{
+						mStillElapsed = 0;
+						updateExtraTextBinding();
+					}
+					return true;
+				}
+				grid->pageRows(direction);
 				return true;
 			}
 			if (config->isMappedTo(BUTTON_BACK, input))
