@@ -532,7 +532,8 @@ void CollectionSystemManager::updateCollectionSystem(FileData* file, const Colle
 
 void CollectionSystemManager::sortLastPlayed(SystemData* system)
 {
-	if (system->getName() != "recent")
+	// Both keep the games played last: sorted before they are trimmed
+	if (!system->isPlayHistory())
 		return;
 
 	FolderData* rootFolder = system->getRootFolder();

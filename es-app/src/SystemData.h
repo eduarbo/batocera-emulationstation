@@ -119,6 +119,8 @@ public:
 	// What X continues: getLastPlayedGame(true), nothing on a utility system
 	FileData* getContinueGame();
 	bool usesRandomCollectionPreview();
+	// The collections of played games (recent, continue): newest first, their previews run through that history
+	bool isPlayHistory();
 	bool rotatesHomePreview();
 	void enterHomePreview();
 	bool hasOtherHomePreview() const;

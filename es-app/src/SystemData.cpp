@@ -2451,12 +2451,17 @@ bool SystemData::usesRandomCollectionPreview()
 		mTheme && mTheme->getVariable("esRandomCollectionPreview") == "true";
 }
 
+bool SystemData::isPlayHistory()
+{
+	return isCollection() && (getName() == "recent" || getName() == "continue");
+}
+
 bool SystemData::rotatesHomePreview()
 {
 	if (!mTheme)
 		return false;
 	if (isCollection())
-		return (getName() == "all" || getName() == "favorites" || getName() == "recent") &&
+		return (getName() == "all" || getName() == "favorites" || isPlayHistory()) &&
 			mTheme->getVariable("esRotateCollectionPreview") == "true";
 	if (mTheme->getVariable("esRotateConsolePreview") != "true" || !isGameSystem() || isUtilitySystem(this))
 		return false;
@@ -2471,7 +2476,7 @@ bool SystemData::hasOtherHomePreview() const
 
 void SystemData::enterHomePreview()
 {
-	if (getName() == "recent" || !isCollection())
+	if (isPlayHistory() || !isCollection())
 	{
 		homePreview(false);
 		mHistoryPreviewIndex = 0;
@@ -2489,7 +2494,7 @@ FileData* SystemData::homePreview(bool advance)
 	if (mRootFolder == nullptr)
 		return nullptr;
 
-	bool history = getName() == "recent" || !isCollection();
+	bool history = isPlayHistory() || !isCollection();
 	if (mCollectionPreviewsDirty)
 	{
 		std::vector<std::string> candidates;
