@@ -1,4 +1,5 @@
 #include "guis/GuiMenu.h"
+#include "CanicaText.h"
 #include "CanicaUpdates.h"
 #include "guis/GuiActivity.h"
 #include "guis/GuiGameSwitcher.h"
@@ -1252,16 +1253,17 @@ void GuiMenu::openDeveloperSettings()
 }
 
 // The kit's version and how it updates. The updater is a program outside the menu: this page shows what it
-// last found and leaves it requests. Its words are Spanish, as the kit's theme: the firmware's catalogue of
-// translations cannot carry new ones.
+// last found and leaves it requests. Its words follow the console's language, Spanish or English, like the
+// kit's theme: the firmware's catalogue of translations cannot carry new ones.
 void GuiMenu::openCanicaSettings()
 {
 	auto status = CanicaUpdates::status();
 	auto theme = ThemeData::getMenuTheme();
 	Window* window = mWindow;
+	const bool es = Canica::spanish();
 	GuiSettings* s = new GuiSettings(mWindow, "CANICA");
 
-	s->addEntry("CONTINUAR UN JUEGO", true, [window]
+	s->addEntry(es ? "CONTINUAR UN JUEGO" : "CONTINUE A GAME", true, [window]
 	{
 		// From the main screen: a game started from it returns there
 		while (window->peekGui() && window->peekGui() != ViewController::get())
@@ -1269,7 +1271,7 @@ void GuiMenu::openCanicaSettings()
 
 		GuiGameSwitcher::open(window);
 	});
-	s->addEntry("ACTIVIDAD", true, [window] { GuiActivity::open(window); });
+	s->addEntry(es ? "ACTIVIDAD" : "ACTIVITY", true, [window] { GuiActivity::open(window); });
 
 	// What follows needs the kit's updater
 	if (status.empty())
@@ -1278,15 +1280,17 @@ void GuiMenu::openCanicaSettings()
 		return;
 	}
 
-	s->addGroup("ACTUALIZACIONES");
-	s->addWithLabel("VERSIÓN", std::make_shared<TextComponent>(mWindow, status["installed"], theme->Text.font, theme->Text.color));
+	s->addGroup(es ? "ACTUALIZACIONES" : "UPDATES");
+	s->addWithLabel(es ? "VERSIÓN" : "VERSION", std::make_shared<TextComponent>(mWindow, status["installed"], theme->Text.font, theme->Text.color));
 
 	std::string mode = CanicaUpdates::mode();
-	auto modes = std::make_shared<OptionListComponent<std::string>>(mWindow, "ACTUALIZACIONES", false);
-	modes->add("PREGUNTAR", "ask", mode == "ask");
-	modes->add("AUTOMÁTICAS", "auto", mode == "auto");
-	modes->add("DESACTIVADAS", "off", mode == "off");
-	s->addWithDescription("ACTUALIZACIONES", status["detail"], modes);
+	auto modes = std::make_shared<OptionListComponent<std::string>>(mWindow, es ? "ACTUALIZACIONES" : "UPDATES", false);
+	modes->add(es ? "PREGUNTAR" : "ASK", "ask", mode == "ask");
+	modes->add(es ? "AUTOMÁTICAS" : "AUTOMATIC", "auto", mode == "auto");
+	modes->add(es ? "DESACTIVADAS" : "OFF", "off", mode == "off");
+	// The updater says its state in both languages; an older one only in Spanish
+	std::string detail = !es && !status["detail_en"].empty() ? status["detail_en"] : status["detail"];
+	s->addWithDescription(es ? "ACTUALIZACIONES" : "UPDATES", detail, modes);
 	s->addSaveFunc([modes]
 	{
 		if (modes->changed())
@@ -1312,17 +1316,17 @@ void GuiMenu::openCanicaSettings()
 	std::string serial = status["serial"];
 	if (!status["available"].empty() && status["ready"] == "1" && !serial.empty() && serial.find_first_not_of("0123456789") == std::string::npos)
 	{
-		s->addEntry("ACTUALIZAR A " + status["available"], false, [window, modes, serial, leave]
+		s->addEntry((es ? "ACTUALIZAR A " : "UPDATE TO ") + status["available"], false, [window, modes, serial, leave]
 		{
 			leave(window, modes, "install " + serial);
 		});
 	}
 
-	s->addEntry("BUSCAR ACTUALIZACIÓN", false, [window, modes, leave]
+	s->addEntry(es ? "BUSCAR ACTUALIZACIÓN" : "CHECK FOR UPDATE", false, [window, modes, leave, es]
 	{
 		Window* w = window;
 		leave(w, modes, "check");
-		w->displayNotificationMessage("Buscando actualizaciones de Canica…");
+		w->displayNotificationMessage(es ? "Buscando actualizaciones de Canica…" : "Checking for Canica updates…");
 	});
 
 	mWindow->pushGui(s);

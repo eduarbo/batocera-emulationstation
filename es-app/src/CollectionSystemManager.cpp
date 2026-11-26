@@ -23,6 +23,7 @@
 #include "Genres.h"
 #include "Paths.h"
 #include "Scripting.h"
+#include "CanicaText.h"
 #include "CanicaUpdates.h"
 
 std::string myCollectionsName = "collections";
@@ -41,7 +42,7 @@ std::vector<CollectionSystemDecl> CollectionSystemManager::getSystemDecls()
 		//type						name            long name                 default sort					  theme folder               isCustom     displayIfEmpty
 		{ AUTO_ALL_GAMES,			"all",				_("all games"),         FileSorts::FILENAME_ASCENDING,    "auto-allgames",           false,       true },
 		{ AUTO_LAST_PLAYED,			"recent",			_("last played"),       FileSorts::LASTPLAYED_ASCENDING,  "auto-lastplayed",         false,       true },
-		{ AUTO_CONTINUE,			"continue",			"Continuar",            FileSorts::LASTPLAYED_ASCENDING,  "auto-continue",           false,       false },
+		{ AUTO_CONTINUE,			"continue",			Canica::text("Continuar", "Continue"), FileSorts::LASTPLAYED_ASCENDING,  "auto-continue",           false,       false },
 		{ AUTO_FAVORITES,			"favorites",		_("favorites"),         FileSorts::FILENAME_ASCENDING,    "auto-favorites",          false,       true },
 		{ AUTO_AT2PLAYERS,			"2players",			_("2 players"),         FileSorts::FILENAME_ASCENDING,    "auto-at2players",         false,       true }, 
 		{ AUTO_AT4PLAYERS,			"4players",			_("4 players"),         FileSorts::FILENAME_ASCENDING,    "auto-at4players",         false,       true }, 

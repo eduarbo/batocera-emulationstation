@@ -4,6 +4,7 @@
 #include "renderers/Renderer.h"
 #include "resources/Font.h"
 #include "utils/StringUtil.h"
+#include "CanicaText.h"
 #include "InputConfig.h"
 #include "LocaleES.h"
 #include "PowerSaver.h"
@@ -152,7 +153,7 @@ void GuiJobConsole::layout()
 	}
 	else if (mScreen.percent >= 0)
 	{
-		std::string percent = std::to_string(Math::min(mScreen.percent, 100)) + " %";
+		std::string percent = std::to_string(Math::min(mScreen.percent, 100)) + (Canica::spanish() ? " %" : "%");
 		float cell = (float)(int)((w - pad * 2 - ch * 2 - ch * 7) / CELLS);
 
 		mGauge = Vector4f(label, gy, Math::max(3.0f, cell), Math::round(row * 0.6f));

@@ -1,4 +1,5 @@
 #include "utils/StringUtil.h"
+#include "CanicaText.h"
 
 #include <algorithm>
 #include <cctype>
@@ -564,8 +565,10 @@ namespace Utils
 				game[0] = game[0] - 'a' + 'A';
 
 			const std::string date = name.substr(n - 13, 6), time = name.substr(n - 6, 6);
+			const std::string day = date.substr(4, 2), month = date.substr(2, 2);
 			_game = game;
-			_when = date.substr(4, 2) + "/" + date.substr(2, 2) + "/20" + date.substr(0, 2) + " \xC2\xB7 " + time.substr(0, 2) + ":" + time.substr(2, 2);
+			// Day first in Spanish, month first in English, like the theme's dates
+			_when = (Canica::spanish() ? day + "/" + month : month + "/" + day) + "/20" + date.substr(0, 2) + " \xC2\xB7 " + time.substr(0, 2) + ":" + time.substr(2, 2);
 			return true;
 		}
 

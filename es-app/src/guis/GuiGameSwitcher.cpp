@@ -11,6 +11,7 @@
 #include "BindingManager.h"
 #include "ThemeData.h"
 #include "CanicaActivity.h"
+#include "CanicaText.h"
 #include "FileData.h"
 #include "InputConfig.h"
 #include "LocaleES.h"
@@ -40,16 +41,17 @@ static std::string when(time_t moment)
 	char clock[8];
 	strftime(clock, sizeof(clock), "%H:%M", &local);
 
+	const bool es = Canica::spanish();
 	long days = (long)((now - moment) / 86400);
 	if (local.tm_yday == today.tm_yday && local.tm_year == today.tm_year)
-		return std::string("hoy ") + clock;
+		return std::string(es ? "hoy " : "today ") + clock;
 	if (days <= 1)
-		return std::string("ayer ") + clock;
+		return std::string(es ? "ayer " : "yesterday ") + clock;
 	if (days < 30)
-		return "hace " + std::to_string(days) + " días";
+		return es ? "hace " + std::to_string(days) + " días" : std::to_string(days) + " days ago";
 
 	char date[16];
-	strftime(date, sizeof(date), "%d/%m/%Y", &local);
+	strftime(date, sizeof(date), es ? "%d/%m/%Y" : "%m/%d/%Y", &local);
 	return date;
 }
 
@@ -231,8 +233,9 @@ void GuiGameSwitcher::select(int index)
 		BindingManager::updateBindings(extra, game);
 
 	if (mState)
-		std::static_pointer_cast<TextComponent>(mState)->setText(entry.resumes ? "Partida automática · " + when(entry.saved) :
-			"Sin partida automática: abre desde su guardado");
+		std::static_pointer_cast<TextComponent>(mState)->setText(entry.resumes ?
+			Canica::text("Partida automática · ", "Auto save · ") + when(entry.saved) :
+			Canica::text("Sin partida automática: abre desde su guardado", "No auto save: load it from its own save"));
 
 	// The picture: the automatic state's screenshot, else the game's image. Pixel art grows by whole steps,
 	// sharp; anything else fits the area.
