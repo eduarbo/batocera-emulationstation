@@ -28,6 +28,7 @@
 #include "components/VideoVlcComponent.h"
 #include "components/VideoLeadIn.h"
 #include "components/BrightnessInfoComponent.h"
+#include "CanicaTiming.h"
 #include "Splash.h"
 #include "PowerSaver.h"
 #include "renderers/Renderer.h"
@@ -132,11 +133,14 @@ bool Window::init(bool initRenderer, bool initInputManager)
 	}
 	else 
 		Renderer::activateWindow();
+	canicaTiming("init: renderer ready");
 
 	if (initInputManager)
 		InputManager::getInstance()->init();
+	canicaTiming("init: input ready");
 
 	ResourceManager::getInstance()->reloadAll();
+	canicaTiming("init: resources reloaded");
 
 	//keep a reference to the default fonts, so they don't keep getting destroyed/recreated
 	if(mDefaultFonts.empty())
@@ -783,8 +787,16 @@ void Window::resetMenuBackgroundShader()
 	}
 }
 
+bool Window::sCanicaFirstFrame = false;
+
 void Window::render()
 {
+	if (sCanicaFirstFrame)
+	{
+		sCanicaFirstFrame = false;
+		canicaTiming("return: first frame");
+	}
+
 	Transform4x4f transform = Transform4x4f::Identity();
 
 	mRenderedHelpPrompts = false;

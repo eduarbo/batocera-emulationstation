@@ -102,6 +102,11 @@ private:
 		// you must call initTexture() after creating a FontTexture to get a textureId
 		void initTexture(); // initializes the OpenGL texture according to this FontTexture's settings, updating textureId
 		void deinitTexture(); // deinitializes the OpenGL texture if any exists, is automatically called in the destructor
+
+		// A copy of every glyph uploaded, so the texture comes back after a game in one upload
+		// instead of each glyph rendered again
+		std::vector<unsigned char> pixels;
+		void store(const Vector2i& at, const Vector2i& size, const unsigned char* data);
 	};
 
 	struct FontFace

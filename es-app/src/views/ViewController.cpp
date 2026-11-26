@@ -32,6 +32,7 @@
 #include <algorithm>
 #include "TextToSpeech.h"
 #include "VolumeControl.h"
+#include "CanicaTiming.h"
 
 ViewController* ViewController::sInstance = nullptr;
 
@@ -737,6 +738,7 @@ void ViewController::launch(FileData* game, LaunchGameOptions options, Vector3f 
 	mLockInput = true;
 
 	GuiComponent::isLaunchTransitionRunning = true;
+	canicaTiming("launch: pressed, fade starts");
 
 	if (!Settings::getInstance()->getBool("HideWindow"))
 		mWindow->setCustomSplashScreen(game->getImagePath(), game->getName(), game);
@@ -774,13 +776,14 @@ void ViewController::launch(FileData* game, LaunchGameOptions options, Vector3f 
 	if (instantFade || transition_style == "fade" || transition_style == "fast fade")
 	{
 		const int fadeDuration = instantFade ? 1 : useShortFade ? 220 : (transition_style == "fast fade" ? 400 : 800);
-		const int returnDuration = instantFade ? 1 : useShortFade ? 180 : 800;
+		const int returnDuration = instantFade ? 1 : useShortFade ? 90 : 800;
 		auto fadeFunc = [this, useShortFade](float t) {
 			mFadeOpacity = useShortFade ? t * t * (3.0f - 2.0f * t) : t;
 		};
 
 		setAnimation(new LambdaAnimation(fadeFunc, fadeDuration), 0, [this, game, fadeFunc, options, returnDuration]
 		{
+			canicaTiming("launch: fade done");
 			if (doLaunchGame(game, options))
 			{
 				GuiComponent::isLaunchTransitionRunning = false;
@@ -790,7 +793,7 @@ void ViewController::launch(FileData* game, LaunchGameOptions options, Vector3f 
 			}
 			else
 			{
-				setAnimation(new LambdaAnimation(fadeFunc, returnDuration), 0, [this] { GuiComponent::isLaunchTransitionRunning = false; mLockInput = false; mWindow->closeSplashScreen(); }, true, 3);
+				setAnimation(new LambdaAnimation(fadeFunc, returnDuration), 0, [this] { canicaTiming("return: fade-in done"); GuiComponent::isLaunchTransitionRunning = false; mLockInput = false; mWindow->closeSplashScreen(); }, true, 3);
 				this->onFileChanged(game, FILE_METADATA_CHANGED);
 			}
 		});

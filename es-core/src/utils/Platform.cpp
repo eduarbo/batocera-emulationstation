@@ -152,27 +152,10 @@ namespace Utils
 			const std::string output = logOutput ? Utils::FileSystem::combine(Paths::getLogPath(), stdoutFilename) : "/dev/null";
 			if (waitForExit)
 			{
-				// Keep the first 300 lines and drain the rest. Closing the read end early
-				// sends SIGPIPE to verbose launchers and can terminate a running game.
-				FILE* child = popen((cmd_utf8 + " 2> " + errors).c_str(), "r");
-				if (!child)
+				ProcessStartInfo self(*this);
+				if (!self.start())
 					return 1;
-				std::ofstream log(output, std::ios::binary);
-				char buffer[8192];
-				int remaining = 300;
-				size_t size;
-				while ((size = fread(buffer, 1, sizeof(buffer), child)) > 0)
-				{
-					size_t kept = 0;
-					while (kept < size && remaining > 0)
-						if (buffer[kept++] == '\n')
-							--remaining;
-					if (kept && log)
-						log.write(buffer, kept);
-				}
-				int status = pclose(child);
-				if (status < 0) return 1;
-				return WIFEXITED(status) ? WEXITSTATUS(status) : WIFSIGNALED(status) ? 128 + WTERMSIG(status) : 1;
+				return self.wait();
 			}
 			std::string cmdOutput = " 2> " + errors + " | sed -n '1,300p' > " + Utils::FileSystem::getEscapedPath(output);
 
@@ -200,6 +183,47 @@ namespace Utils
 			return 0;
 #endif
 		}
+
+#ifndef WIN32
+		bool ProcessStartInfo::start()
+		{
+			if (command.empty() || mChild != nullptr)
+				return false;
+
+			const bool logOutput = Log::enabled();
+			const std::string errors = logOutput ? Utils::FileSystem::getEscapedPath(Utils::FileSystem::combine(Paths::getLogPath(), stderrFilename)) : "/dev/null";
+			mOutput = logOutput ? Utils::FileSystem::combine(Paths::getLogPath(), stdoutFilename) : "/dev/null";
+			mChild = popen((command + " 2> " + errors).c_str(), "r");
+			return mChild != nullptr;
+		}
+
+		int ProcessStartInfo::wait()
+		{
+			if (mChild == nullptr)
+				return 1;
+
+			// Keep the first 300 lines and drain the rest. Closing the read end early
+			// sends SIGPIPE to verbose launchers and can terminate a running game.
+			FILE* child = mChild;
+			mChild = nullptr;
+			std::ofstream log(mOutput, std::ios::binary);
+			char buffer[8192];
+			int remaining = 300;
+			size_t size;
+			while ((size = fread(buffer, 1, sizeof(buffer), child)) > 0)
+			{
+				size_t kept = 0;
+				while (kept < size && remaining > 0)
+					if (buffer[kept++] == '\n')
+						--remaining;
+				if (kept && log)
+					log.write(buffer, kept);
+			}
+			int status = pclose(child);
+			if (status < 0) return 1;
+			return WIFEXITED(status) ? WEXITSTATUS(status) : WIFSIGNALED(status) ? 128 + WTERMSIG(status) : 1;
+		}
+#endif
 
 		int runShutdownCommand()
 		{

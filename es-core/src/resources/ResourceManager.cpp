@@ -9,6 +9,11 @@
 #include "Paths.h"
 #include "utils/ConcurrentVector.h"
 #include <unordered_map>
+#include <chrono>
+#include <cstdio>
+#include "CanicaTiming.h"
+#include "resources/TextureResource.h"
+#include "resources/Font.h"
 
 auto array_deleter = [](unsigned char* p) { delete[] p; };
 
@@ -202,6 +207,10 @@ void ResourceManager::unloadAll()
 
 void ResourceManager::reloadAll()
 {
+	// Canica timing: how many resources the return reloads, by kind, and how long each kind takes
+	int counts[3] = { 0, 0, 0 };
+	double seconds[3] = { 0, 0, 0 };
+
 	auto iter = mReloadables.cbegin();
 	while(iter != mReloadables.cend())
 	{
@@ -211,7 +220,12 @@ void ResourceManager::reloadAll()
 		{
 			if (info->reload)
 			{
-				info->data.lock()->reload();
+				auto data = info->data.lock();
+				const int kind = std::dynamic_pointer_cast<TextureResource>(data) ? 0 : std::dynamic_pointer_cast<Font>(data) ? 1 : 2;
+				const auto start = std::chrono::steady_clock::now();
+				data->reload();
+				seconds[kind] += std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+				counts[kind]++;
 				info->reload = false;
 			}
 
@@ -220,6 +234,11 @@ void ResourceManager::reloadAll()
 		else
 			iter = mReloadables.erase(iter);		
 	}
+
+	char line[160];
+	snprintf(line, sizeof(line), "reload: %d textures %.3f s, %d fonts %.3f s, %d other %.3f s",
+		counts[0], seconds[0], counts[1], seconds[1], counts[2], seconds[2]);
+	canicaTiming(line);
 }
 
 void ResourceManager::addReloadable(std::weak_ptr<IReloadable> reloadable)

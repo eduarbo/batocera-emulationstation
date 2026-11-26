@@ -1,4 +1,5 @@
 #include "resources/Font.h"
+#include <cstring>
 
 #include "renderers/Renderer.h"
 #include "utils/FileSystemUtil.h"
@@ -219,10 +220,26 @@ void Font::FontTexture::initTexture()
 {
 	if (textureId == 0)
 	{
-		textureId = Renderer::createTexture(Renderer::Texture::ALPHA, true, false, textureSize.x(), textureSize.y(), nullptr);
+		textureId = Renderer::createTexture(Renderer::Texture::ALPHA, true, false, textureSize.x(), textureSize.y(), pixels.empty() ? nullptr : pixels.data());
 		if (textureId == 0)
 			LOG(LogError) << "FontTexture::initTexture() failed to create texture " << textureSize.x() << "x" << textureSize.y();
 	}
+}
+
+void Font::FontTexture::store(const Vector2i& at, const Vector2i& size, const unsigned char* data)
+{
+	const int width = textureSize.x();
+	const int height = textureSize.y();
+	if (data == nullptr || at.x() < 0 || at.y() < 0 || at.x() >= width)
+		return;
+
+	if (pixels.empty())
+		pixels.assign((size_t)width * height, 0);
+
+	// The same rows the upload sends: size.x() bytes each
+	const int columns = Math::min(size.x(), width - at.x());
+	for (int row = 0; row < size.y() && at.y() + row < height; row++)
+		memcpy(&pixels[(size_t)(at.y() + row) * width + at.x()], data + (size_t)row * size.x(), columns);
 }
 
 void Font::FontTexture::deinitTexture()
@@ -422,7 +439,10 @@ Font::Glyph* Font::getGlyph(unsigned int id)
 
 	// upload glyph bitmap to texture
 	if (glyphSize.x() > 0 && glyphSize.y() > 0)
+	{
 		Renderer::updateTexture(tex->textureId, Renderer::Texture::ALPHA, cursor.x(), cursor.y(), glyphSize.x(), glyphSize.y(), g->bitmap.buffer);
+		tex->store(cursor, glyphSize, g->bitmap.buffer);
+	}
 
 	// update max glyph height - Limit to ascii table. If we don't it can take in the fallback fonts
 	if (glyphSize.y() > mMaxGlyphHeight && id >= 32 && id < 128)
@@ -440,9 +460,16 @@ Font::Glyph* Font::getGlyph(unsigned int id)
 // completely recreate the texture data for all textures based on mGlyphs information
 void Font::rebuildTextures()
 {
-	// recreate OpenGL textures
+	// recreate OpenGL textures, with the glyphs they had when there is a copy of them
+	bool stored = true;
 	for(auto tex : mTextures)
+	{
 		tex->initTexture();
+		stored = stored && (!tex->pixels.empty() || tex->writePos == Vector2i::Zero());
+	}
+
+	if (stored)
+		return;
 
 	// reupload the texture data
 	for(auto it = mGlyphMap.cbegin(); it != mGlyphMap.cend(); it++)

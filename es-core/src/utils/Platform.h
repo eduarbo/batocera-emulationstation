@@ -2,6 +2,7 @@
 #ifndef ES_CORE_PLATFORM_H
 #define ES_CORE_PLATFORM_H
 
+#include <cstdio>
 #include <string>
 
 #ifdef WIN32
@@ -35,13 +36,25 @@ namespace Utils
 
 			int run() const;
 
-			std::string command;			
+#ifndef WIN32
+			// run() in two steps, for a command that should start before its caller is done with
+			// something else: start() launches it (false if it could not), wait() reads its
+			// output as run() does and returns its exit code.
+			bool start();
+			int wait();
+#endif
+
+			std::string command;
 			bool waitForExit;
 			bool showWindow;
 			Window* window;
 #ifndef WIN32
 			std::string stderrFilename;
 			std::string stdoutFilename;
+
+		private:
+			FILE* mChild = nullptr;
+			std::string mOutput;
 #endif
 		};
 

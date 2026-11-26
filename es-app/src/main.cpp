@@ -36,6 +36,9 @@
 #include "ImageIO.h"
 #include "components/VideoVlcComponent.h"
 #include <csignal>
+#ifndef WIN32
+#include <unistd.h>
+#endif
 #include "InputConfig.h"
 #include "RetroAchievements.h"
 #include "TextToSpeech.h"
@@ -545,6 +548,22 @@ int main(int argc, char* argv[])
 #endif
 
 	Scripting::fireEvent("start");
+
+#if KNULLI && !WIN32
+	// Canica: the save adapter's warm launcher loads configgen now, so even the first game skips it.
+	// It runs with the environment the games get and detaches itself; one already running stays.
+	{
+		const std::string warm = Paths::getUserEmulationStationPath() + "/resume/emulatorlauncher";
+		if (access(warm.c_str(), X_OK) == 0)
+		{
+			Utils::Platform::ProcessStartInfo psi(Utils::FileSystem::getEscapedPath(warm) + " --serve");
+			psi.waitForExit = false;
+			psi.stderrFilename = "es_script_stderr.log";
+			psi.stdoutFilename = "es_script_stdout.log";
+			psi.run();
+		}
+	}
+#endif
 
 	// metadata init
 	HttpReq::resetCookies();

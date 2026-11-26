@@ -37,6 +37,9 @@
 #include "QuickResume.h"
 #include "CanicaActivity.h"
 #include "guis/GuiGameSwitcher.h"
+#include "CanicaTiming.h"
+#include <atomic>
+#include <thread>
 #include <chrono>
 
 using namespace Utils::Platform;
@@ -701,6 +704,24 @@ std::string FileData::getlaunchCommand(LaunchGameOptions& options, bool includeC
 		command = options.saveStateInfo->setupSaveState(this, command);		
 	}
 
+#if KNULLI
+	// Canica: the other configgen launches go through the save adapter as well, with resume left
+	// out: the same launch, started sooner (warm launcher, hooks side by side, no fixed waits).
+	// Only an adapter that knows the option gets it.
+	if (options.netPlayMode == DISABLED)
+	{
+		const std::string resume = Paths::getUserEmulationStationPath() + "/resume/emulatorlauncher";
+		for (const std::string name : {std::string("emulatorlauncher"), std::string("/usr/bin/emulatorlauncher")})
+		{
+			if (command.compare(0, name.size() + 1, name + " ") != 0 || !Utils::FileSystem::exists(resume))
+				continue;
+			if (Utils::FileSystem::readAllText(resume).find("\"--es-no-resume\"") != std::string::npos)
+				command = Utils::FileSystem::getEscapedPath(resume) + " --es-no-resume" + command.substr(name.size());
+			break;
+		}
+	}
+#endif
+
 	return command;
 }
 
@@ -761,24 +782,49 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 	const std::string quickResumeCommand = getlaunchCommand(false);
 	// KNULLI - QUICK RESUME MODE <<<<<
 
+	canicaTiming("launch: command ready");
+
+	// The launcher starts first: its Python and the game's configuration take seconds before the
+	// emulator needs the screen, so the menu lets go of the screen and the sound meanwhile. While
+	// /var/run/canica/menu-busy exists, Canica's launcher holds the emulator back.
+	static const char* menuBusy = "/var/run/canica/menu-busy";
+	// ...and when the emulator is gone it writes game-ended, before its own gameStop scripts
+	static const char* gameEnded = "/var/run/canica/game-ended";
+	remove(gameEnded);
+	auto p2kConv = convertP2kFile();
+	mRunningGame = gameToUpdate;
+	GuiGameSwitcher::onGameStarting(gameToUpdate);
+
+	bool hideWindow = Settings::getInstance()->getBool("HideWindow");
+	ProcessStartInfo process(command);
+	process.window = hideWindow ? NULL : window;
+	if (process.window != nullptr)
+		process.window->renderSplashScreen();
+
+	if (FILE* busy = fopen(menuBusy, "w"))
+		fclose(busy);
+	const bool started = process.start();
+	canicaTiming(started ? "launch: launcher started" : "launch: launcher did not start");
+
 	AudioManager::getInstance()->deinit();
 	VolumeControl::getInstance()->deinit();
 
-	bool hideWindow = Settings::getInstance()->getBool("HideWindow");
-	if (!window->deinit(hideWindow, true))
+	// A preview still stopping: try again for a moment; the game is already on its way
+	bool released = window->deinit(hideWindow, true);
+	for (int tries = 0; !released && tries < 20; tries++)
 	{
-		VolumeControl::getInstance()->init();
-		AudioManager::getInstance()->init();
-		window->displayNotificationMessage(_("VIDEO PREVIEW IS STILL STOPPING. PLEASE TRY AGAIN."));
-		return false;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		released = window->deinit(hideWindow, true);
 	}
+	remove(menuBusy);
+	canicaTiming(released ? "launch: menu released" : "launch: menu not released");
+
 	QuickResume::setQuickResume(quickResumeCommand, getFullPath());
-	
+
 	const std::string rom = Utils::FileSystem::getEscapedPath(getPath());
 	const std::string basename = Utils::FileSystem::getStem(getPath());
 
 	Scripting::fireEvent("game-start", rom, basename, getName());
-	GuiGameSwitcher::onGameStarting(gameToUpdate);
 
 	// The play time counts while the console is awake: a game left suspended for hours is not played
 	time_t tstart = time(NULL);
@@ -786,14 +832,47 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 
 	LOG(LogInfo) << "	" << command;
 
-	auto p2kConv = convertP2kFile();
+	// The window and the sound come back as soon as the emulator is gone, on this thread, while
+	// another reads the launcher to its end (its gameStop scripts take a while).
+	auto bringBack = [&]()
+	{
+		if (!hideWindow && Settings::getInstance()->getBool("HideWindowFullReinit"))
+		{
+			ResourceManager::getInstance()->reloadAll();
+			window->deinit();
+			window->init();
+			window->setCustomSplashScreen(gameToUpdate->getImagePath(), gameToUpdate->getName(), gameToUpdate);
+		}
+		else
+			window->init(hideWindow);
+		canicaTiming("return: window ready");
 
-	mRunningGame = gameToUpdate;
+		VolumeControl::getInstance()->init();
+		canicaTiming("return: volume ready");
+		AudioManager::getInstance()->init();
+		canicaTiming("return: sound ready");
+	};
 
-	ProcessStartInfo process(command);
-	process.window = hideWindow ? NULL : window;
-	
-	int exitCode = process.run();
+	int exitCode = 1;
+	bool broughtBack = false;
+	if (started)
+	{
+		std::atomic<bool> done(false);
+		std::thread reader([&process, &exitCode, &done]() { exitCode = process.wait(); done = true; });
+		while (!done)
+		{
+			if (!broughtBack && access(gameEnded, F_OK) == 0)
+			{
+				canicaTiming("return: emulator ended");
+				bringBack();
+				broughtBack = true;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+		reader.join();
+	}
+	remove(gameEnded);
+	canicaTiming("return: launcher ended");
 	if (exitCode != 0)
 		LOG(LogWarning) << "...launch terminated with nonzero exit code " << exitCode << "!";
 
@@ -812,24 +891,15 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 	if (!p2kConv.empty()) // delete .keys file if it has been converted from p2k
 		Utils::FileSystem::removeFile(p2kConv);
 
-	Scripting::fireEvent("game-end");
+	// Its scripts only start things of their own: they run beside the way back
+	std::thread([]() { Scripting::fireEvent("game-end"); }).detach();
 	
 	// KNULLI - QUICK RESUME MODE >>>>>
 	QuickResume::postLaunchConditionalClean();
 	// KNULLI - QUICK RESUME MODE <<<<<
 
-	if (!hideWindow && Settings::getInstance()->getBool("HideWindowFullReinit"))
-	{
-		ResourceManager::getInstance()->reloadAll();
-		window->deinit();
-		window->init();
-		window->setCustomSplashScreen(gameToUpdate->getImagePath(), gameToUpdate->getName(), gameToUpdate);
-	}
-	else
-		window->init(hideWindow);
-
-	VolumeControl::getInstance()->init();
-	AudioManager::getInstance()->init();
+	if (!broughtBack)
+		bringBack();
 
 	window->normalizeNextUpdate();
 
@@ -854,6 +924,7 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 		saveToGamelistRecovery(gameToUpdate);
 	}
 
+	canicaTiming("return: library updated");
 	window->reactivateGui();
 	GuiGameSwitcher::openIfRequested(window);
 
@@ -865,6 +936,8 @@ bool FileData::launchGame(Window* window, LaunchGameOptions options)
 	if (exitCode >= 200 && exitCode <= 300)
 		window->pushGui(new GuiMsgBox(window, _("AN ERROR OCCURRED") + ":\r\n" + getMessageFromExitCode(exitCode), _("OK"), nullptr, GuiMsgBoxIcon::ICON_ERROR));
 
+	canicaTiming("return: launchGame done");
+	Window::sCanicaFirstFrame = true;
 	return exitCode == 0;
 }
 

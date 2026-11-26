@@ -1,4 +1,5 @@
 #include "AudioManager.h"
+#include "CanicaTiming.h"
 
 #include "Log.h"
 #include "Settings.h"
@@ -66,6 +67,7 @@ void AudioManager::init()
 		LOG(LogError) << "Error initializing SDL audio!\n" << SDL_GetError();
 		return;
 	}
+	canicaTiming("audio: SDL audio ready");
 
 	// Open the audio device and pause
 	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) < 0)
@@ -77,10 +79,12 @@ void AudioManager::init()
 	{
 		LOG(LogInfo) << "SDL AUDIO Initialized";
 		mInitialized = true;
+		canicaTiming("audio: device open");
 
 		// Reload known sounds
 		for (unsigned int i = 0; i < sSoundVector.size(); i++)
 			sSoundVector[i]->init();
+		canicaTiming(("audio: " + std::to_string(sSoundVector.size()) + " sounds loaded").c_str());
 
 		mMusicVolume = getMaxMusicVolume();
 		Mix_VolumeMusic(mMusicVolume);

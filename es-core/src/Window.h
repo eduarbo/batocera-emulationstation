@@ -110,6 +110,8 @@ public:
 	// events and for the next frame left out), whether it drew, and how long input waited for a drawn frame.
 	// takeFrameStats gives them as JSON since the last call.
 	static void recordFrame(int workMs, bool drawn, const std::vector<int>& parts = std::vector<int>());
+	// Set when a game has ended: the next frame logs its time (CanicaTiming)
+	static bool sCanicaFirstFrame;
 	static void recordInput(unsigned int eventTicks);
 	static std::string takeFrameStats();
 
